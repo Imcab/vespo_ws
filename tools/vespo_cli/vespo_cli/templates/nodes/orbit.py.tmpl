@@ -1,0 +1,179 @@
+"""
+@NODE@: vuela en círculo alrededor de un punto, mirando al centro.
+
+Muestra cómo combinar setpoints de POSICIÓN con VELOCIDAD de feedforward:
+la posición dice dónde estar en el círculo y la velocidad (tangente al
+círculo) le dice a PX4 cómo moverse, así no va "a tirones" de punto en punto.
+
+Flujo:
+  1. ~1 s de heartbeat + setpoint, luego OFFBOARD + ARM.
+  2. Sube y va al punto de inicio del círculo (al norte del centro).
+  3. Da `laps` vueltas a `speed` m/s y aterriza (LAND de PX4).
+
+OJO: este nodo ARMA el vehículo. Pruébalo primero en simulación
+(vespo up --sim) y en el dron real sin hélices.
+
+Ejecutar (con PX4 y el agente corriendo, p. ej. vespo up):
+  ros2 run @PKG@ @NODE@
+  ros2 run @PKG@ @NODE@ --ros-args -p radius:=8.0 -p speed:=3.0 -p laps:=3
+"""
+
+import math
+from enum import Enum
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from px4_msgs.msg import (OffboardControlMode, TrajectorySetpoint, VehicleCommand,
+                          VehicleLocalPosition, VehicleStatus)
+
+PX4_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+DT = 0.1   # s entre pasos (timer a 10 Hz)
+
+
+class State(Enum):
+    WARM_UP = 1
+    APPROACH = 2
+    ORBITING = 3
+    LANDING = 4
+
+
+class @CLASS@(Node):
+
+    def __init__(self):
+        super().__init__('@NODE@')
+        self.center_x = self.declare_parameter('center_x', 0.0).value   # m al norte del origen
+        self.center_y = self.declare_parameter('center_y', 0.0).value   # m al este del origen
+        self.altitude = self.declare_parameter('altitude', 5.0).value   # m
+        self.radius = self.declare_parameter('radius', 5.0).value       # m
+        self.speed = self.declare_parameter('speed', 2.0).value         # m/s sobre el círculo
+        self.laps = self.declare_parameter('laps', 2).value
+
+        self.status = VehicleStatus()
+        self.local = VehicleLocalPosition()
+        self.state = State.WARM_UP
+        self.angle = 0.0
+        self.ticks = 0
+        self.last_command = None
+
+        # El sufijo _vN es la MESSAGE_VERSION del mensaje en px4_msgs.
+        self.create_subscription(VehicleStatus, '@out:VehicleStatus@',
+                                 lambda msg: setattr(self, 'status', msg), PX4_QOS)
+        self.create_subscription(VehicleLocalPosition, '@out:VehicleLocalPosition@',
+                                 lambda msg: setattr(self, 'local', msg), PX4_QOS)
+        self.offboard_pub = self.create_publisher(OffboardControlMode, '@in:OffboardControlMode@', PX4_QOS)
+        self.setpoint_pub = self.create_publisher(TrajectorySetpoint, '@in:TrajectorySetpoint@', PX4_QOS)
+        self.command_pub = self.create_publisher(VehicleCommand, '@in:VehicleCommand@', PX4_QOS)
+
+        self.create_timer(DT, self.step)
+        self.get_logger().info(
+            f'@NODE@: {self.laps} vueltas de {self.radius:.1f} m de radio a {self.speed:.1f} m/s')
+
+    def step(self):
+        armed = self.status.arming_state == VehicleStatus.ARMING_STATE_ARMED
+        nav = self.status.nav_state
+
+        if self.state == State.LANDING:
+            if not armed:
+                self.get_logger().info('En tierra y desarmado. Fin')
+                raise SystemExit
+            if nav != VehicleStatus.NAVIGATION_STATE_AUTO_LAND and self.every_second():
+                self.send_command(VehicleCommand.VEHICLE_CMD_NAV_LAND)
+            return
+
+        # Punto del círculo para el ángulo actual (0 = al norte del centro)
+        x = self.center_x + self.radius * math.cos(self.angle)
+        y = self.center_y + self.radius * math.sin(self.angle)
+        vx = vy = 0.0
+
+        if self.state == State.WARM_UP:
+            self.ticks += 1
+            if self.ticks >= 10:
+                if armed and nav == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+                    self.get_logger().info('En OFFBOARD, yendo al inicio del círculo')
+                    self.state = State.APPROACH
+                elif self.every_second():
+                    self.send_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)   # 6 = OFFBOARD
+                    self.send_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+
+        elif self.state == State.APPROACH:
+            if (math.hypot(x - self.local.x, y - self.local.y) < 0.3
+                    and abs(-self.altitude - self.local.z) < 0.3):
+                self.get_logger().info('En el círculo, orbitando')
+                self.state = State.ORBITING
+
+        elif self.state == State.ORBITING:
+            # Velocidad angular = v / r. La velocidad lineal es tangente al círculo.
+            vx = -self.speed * math.sin(self.angle)
+            vy = self.speed * math.cos(self.angle)
+            self.angle += self.speed / self.radius * DT
+            if self.angle >= 2 * math.pi * self.laps:
+                self.get_logger().info(f'{self.laps} vueltas completas, aterrizando')
+                self.state = State.LANDING
+                return
+
+        # Heartbeat: posición + velocidad (feedforward)
+        offboard = OffboardControlMode()
+        offboard.position = True
+        offboard.velocity = True
+        offboard.timestamp = self.now_us()
+        self.offboard_pub.publish(offboard)
+
+        setpoint = TrajectorySetpoint()
+        setpoint.position = [float(x), float(y), -float(self.altitude)]
+        setpoint.velocity = [float(vx), float(vy), 0.0]
+        # Mirando al centro: el ángulo del vector dron -> centro
+        setpoint.yaw = math.atan2(self.center_y - y, self.center_x - x)
+        setpoint.timestamp = self.now_us()
+        self.setpoint_pub.publish(setpoint)
+
+        if self.state != State.WARM_UP and nav != VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+            self.get_logger().warn(f'Fuera de OFFBOARD (nav={nav}): abortado')
+            raise SystemExit
+
+    def every_second(self):
+        now = self.get_clock().now()
+        if self.last_command and (now - self.last_command).nanoseconds < 1e9:
+            return False
+        self.last_command = now
+        return True
+
+    def now_us(self):
+        return self.get_clock().now().nanoseconds // 1000
+
+    def send_command(self, command, p1=0.0, p2=0.0):
+        msg = VehicleCommand()
+        msg.command = command
+        msg.param1 = float(p1)
+        msg.param2 = float(p2)
+        msg.target_system = 1
+        msg.target_component = 1
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True
+        msg.timestamp = self.now_us()
+        self.command_pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = @CLASS@()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, SystemExit):
+        pass   # Ctrl+C o fin de la misión: salir sin traceback
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

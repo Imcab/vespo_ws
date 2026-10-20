@@ -1,0 +1,82 @@
+# Project settings shared by every machine. Committed to git.
+#
+# Machine-specific values (role, PX4 path, serial port) live in
+# vespo.local.toml, which `vespo init` writes and git ignores. Any key in the
+# local file overrides the same key here.
+
+[workspace]
+ros_distro = "jazzy"
+
+[ros]
+domain_id = 0
+
+[px4]
+# PX4-Autopilot version the team builds against. px4_msgs in vespo.repos must
+# carry exactly the same messages; `vespo px4 update` moves both together.
+ref = "v1.17.0"
+commit = "d6f12ad1c4f70ad3230afd7d86e971421e02fef4"
+
+# What `vespo simulate --default` launches. Each machine can override these
+# with `vespo config edit sim_model` (and sim_world, sim_pose, sim_follow,
+# sim_headless), which writes them to vespo.local.toml.
+#   pose    "auto" = the world's spawn.yaml (or 0,0), else "x,y[,z[,yaw_deg]]"
+#   follow  "auto" = PX4's camera offset (2 m), "off" = free camera, else metres
+[simulation]
+model = "x500"
+world = "default"
+pose = "auto"
+follow = "auto"
+headless = false
+
+[build]
+# colcon --packages-skip-regex for every build of the whole workspace:
+# third-party examples nobody here runs.
+skip_regex = ["example_.*"]
+
+[agent]
+udp_port = 8888
+baud = 921600
+
+# Flight controllers `vespo config` offers, and the PX4 make target that
+# `vespo flash` builds for each. Add a board by adding a line; the target
+# must exist under PX4-Autopilot/boards/<vendor>/<model>/<variant>.px4board.
+[flight_controllers]
+pixhawk6c_mini = { name = "Holybro Pixhawk 6C Mini", target = "px4_fmu-v6c_default" }
+pixhawk6c = { name = "Holybro Pixhawk 6C", target = "px4_fmu-v6c_default" }
+pixhawk6x = { name = "Holybro Pixhawk 6X / 6X Pro", target = "px4_fmu-v6x_default" }
+pixhawk6x_rt = { name = "Holybro Pixhawk 6X-RT", target = "px4_fmu-v6xrt_default" }
+pixhawk5x = { name = "Holybro Pixhawk 5X", target = "px4_fmu-v5x_default" }
+pixhawk4 = { name = "Holybro Pixhawk 4 / 4 Mini", target = "px4_fmu-v5_default" }
+durandal = { name = "Holybro Durandal", target = "holybro_durandal-v1_default" }
+pixracer = { name = "mRo Pixracer", target = "px4_fmu-v4_default" }
+pixhawk2 = { name = "Pixhawk 2.4.8 / Cube Black", target = "px4_fmu-v3_default" }
+cube_orange = { name = "CubePilot Cube Orange", target = "cubepilot_cubeorange_default" }
+cube_orange_plus = { name = "CubePilot Cube Orange+", target = "cubepilot_cubeorangeplus_default" }
+ark_v6x = { name = "ARK FMU v6X", target = "ark_fmu-v6x_default" }
+cuav_x7pro = { name = "CUAV X7 Pro", target = "cuav_x7pro_default" }
+
+# A role describes what a machine does and therefore what it needs.
+#   link        how the Micro XRCE-DDS Agent reaches PX4: udp, serial or none
+#   simulation  whether PX4 SITL and Gazebo run on this machine
+#   qgc         whether QGroundControl runs on this machine (vespo qgc)
+#   skip        colcon packages this role never builds
+[roles.sim]
+description = "Development PC running PX4 SITL and Gazebo Harmonic"
+link = "udp"
+simulation = true
+qgc = true
+skip = []
+
+[roles.companion]
+description = "Onboard computer (Jetson, Raspberry Pi) wired to the flight controller"
+link = "serial"
+simulation = false
+qgc = false
+skip = []
+
+[roles.ground]
+description = "Ground station that only monitors"
+link = "none"
+simulation = false
+qgc = true
+skip = ["microxrcedds_agent"]

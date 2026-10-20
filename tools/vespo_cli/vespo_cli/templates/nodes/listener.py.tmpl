@@ -1,0 +1,75 @@
+"""
+@NODE@: solo LEE datos del dron, no manda nada a PX4.
+
+Se suscribe al estado (armado, modo), la posición local y la batería, e
+imprime un resumen una vez por segundo. Es seguro correrlo en cualquier
+momento, incluso con el dron volando con otro nodo.
+
+Ejecutar (con PX4 y el agente corriendo, p. ej. vespo up):
+  ros2 run @PKG@ @NODE@
+"""
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from px4_msgs.msg import BatteryStatus, VehicleLocalPosition, VehicleStatus
+
+# Mismo QoS con el que publica PX4 (best_effort + transient_local).
+PX4_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+
+class @CLASS@(Node):
+
+    def __init__(self):
+        super().__init__('@NODE@')
+        self.status = VehicleStatus()
+        self.local = VehicleLocalPosition()
+        self.battery = BatteryStatus()
+
+        # Cada callback solo guarda el último mensaje; el timer imprime, para no
+        # llenar la terminal (algunos topics llegan a 50-100 Hz).
+        # El sufijo _vN es la MESSAGE_VERSION del mensaje en px4_msgs.
+        self.create_subscription(VehicleStatus, '@out:VehicleStatus@',
+                                 lambda msg: setattr(self, 'status', msg), PX4_QOS)
+        self.create_subscription(VehicleLocalPosition, '@out:VehicleLocalPosition@',
+                                 lambda msg: setattr(self, 'local', msg), PX4_QOS)
+        self.create_subscription(BatteryStatus, '@out:BatteryStatus@',
+                                 lambda msg: setattr(self, 'battery', msg), PX4_QOS)
+
+        self.create_timer(1.0, self.print_summary)
+        self.get_logger().info('@NODE@ iniciado, esperando datos de PX4...')
+
+    def print_summary(self):
+        # timestamp 0 = todavía no llegó ningún mensaje: suele ser que no corre
+        # el agente o PX4, o que el nombre del topic no coincide.
+        if self.status.timestamp == 0:
+            self.get_logger().warn('Sin datos de PX4 todavía (¿corre el agente? prueba: vespo up)')
+            return
+        armed = self.status.arming_state == VehicleStatus.ARMING_STATE_ARMED
+        self.get_logger().info(
+            f'{"ARMADO" if armed else "desarmado"} | nav={self.status.nav_state} '
+            f'| x={self.local.x:.2f} y={self.local.y:.2f} alt={-self.local.z:.2f} m '   # NED: altura = -z
+            f'| batería {self.battery.voltage_v:.2f} V ({self.battery.remaining * 100:.0f} %)')
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = @CLASS@()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass   # Ctrl+C: salir sin traceback
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vespo-cli"
+version = "0.1.0"
+description = "Command line tool for the VespoUAV ROS 2 + PX4 workspace"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Imad Jared Cabrera Trejo", email = "cabreratrejoimadjared@gmail.com" }]
+requires-python = ">=3.10"
+dependencies = [
+  "typer>=0.9",
+  "rich>=13",
+  "PyYAML>=5.4",
+  "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.scripts]
+vespo = "vespo_cli.main:app"
+
+[tool.setuptools.packages.find]
+include = ["vespo_cli*"]
+
+[tool.setuptools.package-data]
+vespo_cli = ["templates/**/*"]

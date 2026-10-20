@@ -1,0 +1,21 @@
+"""
+Lanza el nodo @NODE@.
+
+    ros2 launch @PKG@ @PKG@.launch.py
+    vespo up --launch @PKG@ @PKG@.launch.py     (PX4 + agente + este launch)
+"""
+
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package="@PKG@",
+            executable="@NODE@",
+            name="@NODE@",
+            output="screen",
+            emulate_tty=True,   # colores y logs al momento, aunque no haya terminal
+        ),
+    ])

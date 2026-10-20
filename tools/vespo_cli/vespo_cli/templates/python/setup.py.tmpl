@@ -1,0 +1,31 @@
+from glob import glob
+
+from setuptools import find_packages, setup
+
+package_name = '@PKG@'
+
+setup(
+    name=package_name,
+    version='0.0.1',
+    packages=find_packages(exclude=['test']),
+    data_files=[
+        ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        # Los launch quedan en share/@PKG@/launch: ros2 launch @PKG@ <archivo>.launch.py
+        ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='@MAINTAINER@',
+    maintainer_email='@EMAIL@',
+    description='@DESCRIPTION@',
+    license='Apache-2.0',
+    # Cada línea es un ejecutable: ros2 run @PKG@ <nombre>.
+    # Para agregar un nodo: vespo new @PKG@ --node <nombre> (o crea
+    # @PKG@/<nombre>.py y añade su línea aquí).
+    entry_points={
+        'console_scripts': [
+            '@NODE@ = @PKG@.@NODE@:main',
+        ],
+    },
+)

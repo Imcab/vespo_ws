@@ -1,0 +1,4 @@
+prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/@PROJECT_NAME@/models/tmr_field
+prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/@PROJECT_NAME@/models/aruco_markers
+prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/@PROJECT_NAME@/worlds/tmr_field
+prepend-non-duplicate;GZ_SIM_RESOURCE_PATH;share/@PROJECT_NAME@/models

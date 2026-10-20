@@ -1,0 +1,10 @@
+<model>
+<name>{model_name}</name>
+<version>1.0</version>
+<sdf version="1.9">model.sdf</sdf>
+<author>
+<name>Imad Jared</name>
+<email>cabreratrejoimadjared@gmail.com</email>
+</author>
+<description>Aruco tag model for id {tag_id}</description>
+</model>

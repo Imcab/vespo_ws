@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  QAV250 para PX4 SITL en Gazebo Harmonic.
+
+  Estructura (igual que el x500 de PX4):
+    base_link   cuerpo: malla del marco, inercia, colisión y sensores
+    rotor_0..3  una hélice por link, unida a base_link con un joint que gira
+    plugins     un MulticopterMotorModel por motor (convierte el comando de
+                PX4 en velocidad y empuje)
+
+  Marco del modelo: x = frente, y = izquierda, z = arriba (FLU).
+  Se tomó +X del STL como frente. Las hélices de adelante son rojas y las de
+  atrás negras, para distinguir el frente en Gazebo.
+
+  Mallas (medidas del STL, en mm):
+    QAV250.STL    marco con motores. Motores en x = ±77.2, y = ±98.7 respecto
+                  al centro (diagonal 250.6 mm). El centro de los motores está
+                  en (-0.88, 119.58) del STL y la parte de abajo en z = 0.25.
+    propeller.STL hélice de 5" y 3 aspas. El buje está en (76.27, 98.79) del
+                  STL, z de 0.23 a 8.43.
+  Los STL están en mm, por eso todas las mallas usan scale 0.001, y no están
+  centrados, así que cada visual lleva un <pose> que los recentra.
+
+  Posición de los rotores y orden que espera PX4 (quad X, igual que x500):
+    rotor_0 adelante-derecha  ccw   (+0.0772, -0.0987)
+    rotor_1 atrás-izquierda   ccw   (-0.0772, +0.0987)
+    rotor_2 adelante-izquierda cw   (+0.0772, +0.0987)
+    rotor_3 atrás-derecha     cw    (-0.0772, -0.0987)
+  Deben coincidir con CA_ROTORn_PX/PY del airframe 4250_gz_qav250
+  (que usa FRD: y positiva a la DERECHA, por eso ahí cambia el signo de PY).
+-->
+<sdf version="1.9">
+  <model name="qav250">
+    <!-- Aparece con la parte de abajo ~1 mm sobre el suelo -->
+    <pose>0 0 0.021 0 0 0</pose>
+
+    <link name="base_link">
+      <!-- Masa total ~0.55 kg (marco + motores + electrónica + batería 4S),
+           menos las 4 hélices, que son links aparte. Inercia estimada como
+           cuerpo central + 4 motores puntuales en los brazos. -->
+      <inertial>
+        <mass>0.53</mass>
+        <inertia>
+          <ixx>0.0014</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.0018</iyy>
+          <iyz>0</iyz>
+          <izz>0.0030</izz>
+        </inertia>
+      </inertial>
+
+      <!-- Marco. El origen de base_link queda en el centro de los motores y
+           20 mm arriba de la base del marco (z = 20 mm del STL). -->
+      <visual name="frame_visual">
+        <pose>0.00088 -0.11958 -0.020 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://qav250/meshes/QAV250.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.15 0.15 0.15 1</ambient>
+          <diffuse>0.2 0.2 0.2 1</diffuse>
+          <specular>0.3 0.3 0.3 1</specular>
+        </material>
+      </visual>
+
+      <!-- Colisión simple: una caja plana con la huella del marco. Su base
+           coincide con la del STL (z = -0.0198), así el dron se apoya en el
+           suelo como el real. -->
+      <collision name="frame_collision">
+        <pose>0 0 -0.0098 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.18 0.23 0.02</size>
+          </box>
+        </geometry>
+        <surface>
+          <contact>
+            <ode>
+              <min_depth>0.001</min_depth>
+              <max_vel>0</max_vel>
+            </ode>
+          </contact>
+          <friction>
+            <ode/>
+          </friction>
+        </surface>
+      </collision>
+
+      <!-- Sensores que PX4 necesita, copiados del x500 de PX4. -->
+      <sensor name="air_pressure_sensor" type="air_pressure">
+        <gz_frame_id>base_link</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>50</update_rate>
+        <air_pressure>
+          <pressure>
+            <noise type="gaussian">
+              <mean>0</mean>
+              <stddev>3</stddev>
+            </noise>
+          </pressure>
+        </air_pressure>
+      </sensor>
+      <sensor name="magnetometer_sensor" type="magnetometer">
+        <gz_frame_id>base_link</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>100</update_rate>
+        <magnetometer>
+          <x>
+            <noise type="gaussian">
+              <stddev>0.0001</stddev>
+            </noise>
+          </x>
+          <y>
+            <noise type="gaussian">
+              <stddev>0.0001</stddev>
+            </noise>
+          </y>
+          <z>
+            <noise type="gaussian">
+              <stddev>0.0001</stddev>
+            </noise>
+          </z>
+        </magnetometer>
+      </sensor>
+      <sensor name="imu_sensor" type="imu">
+        <gz_frame_id>base_link</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>250</update_rate>
+        <imu>
+          <angular_velocity>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0008726646</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0008726646</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.0008726646</stddev>
+              </noise>
+            </z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.00637</stddev>
+              </noise>
+            </x>
+            <y>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.00637</stddev>
+              </noise>
+            </y>
+            <z>
+              <noise type="gaussian">
+                <mean>0.0</mean>
+                <stddev>0.00686</stddev>
+              </noise>
+            </z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+      <sensor name="navsat_sensor" type="navsat">
+        <gz_frame_id>base_link</gz_frame_id>
+        <always_on>1</always_on>
+        <update_rate>30</update_rate>
+      </sensor>
+    </link>
+
+    <!--
+      Rotores. Cada uno:
+        - link en la punta del motor, a la altura del centro de la hélice
+          (la hélice va sobre la campana del motor, z = 22.4 mm del STL,
+          y mide 8.2 mm de grueso: centro en 26.5 mm, es decir 6.5 mm sobre
+          el origen de base_link)
+        - visual de la hélice recentrada en su buje
+        - colisión fina del tamaño del disco (127 mm)
+        - joint revolute en z, para que el plugin lo haga girar
+      Se usa la misma malla para cw y ccw: el giro visual queda "al revés" en
+      dos hélices, pero no afecta el vuelo (el empuje lo calcula el plugin).
+    -->
+    <link name="rotor_0">
+      <pose>0.0772 -0.0987 0.0065 0 0 0</pose>
+      <inertial>
+        <mass>0.005</mass>
+        <inertia>
+          <ixx>1e-07</ixx>
+          <iyy>6.7e-06</iyy>
+          <izz>6.8e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name="rotor_0_visual">
+        <pose>-0.07627 -0.09879 -0.00433 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://qav250/meshes/propeller.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.7 0.05 0.05 1</ambient>
+          <diffuse>0.8 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+      <collision name="rotor_0_collision">
+        <geometry>
+          <box>
+            <size>0.127 0.012 0.001</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="rotor_0_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>rotor_0</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <link name="rotor_1">
+      <pose>-0.0772 0.0987 0.0065 0 0 0</pose>
+      <inertial>
+        <mass>0.005</mass>
+        <inertia>
+          <ixx>1e-07</ixx>
+          <iyy>6.7e-06</iyy>
+          <izz>6.8e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name="rotor_1_visual">
+        <pose>-0.07627 -0.09879 -0.00433 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://qav250/meshes/propeller.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+      <collision name="rotor_1_collision">
+        <geometry>
+          <box>
+            <size>0.127 0.012 0.001</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="rotor_1_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>rotor_1</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <link name="rotor_2">
+      <pose>0.0772 0.0987 0.0065 0 0 0</pose>
+      <inertial>
+        <mass>0.005</mass>
+        <inertia>
+          <ixx>1e-07</ixx>
+          <iyy>6.7e-06</iyy>
+          <izz>6.8e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name="rotor_2_visual">
+        <pose>-0.07627 -0.09879 -0.00433 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://qav250/meshes/propeller.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.7 0.05 0.05 1</ambient>
+          <diffuse>0.8 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+      <collision name="rotor_2_collision">
+        <geometry>
+          <box>
+            <size>0.127 0.012 0.001</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="rotor_2_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>rotor_2</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <link name="rotor_3">
+      <pose>-0.0772 -0.0987 0.0065 0 0 0</pose>
+      <inertial>
+        <mass>0.005</mass>
+        <inertia>
+          <ixx>1e-07</ixx>
+          <iyy>6.7e-06</iyy>
+          <izz>6.8e-06</izz>
+        </inertia>
+      </inertial>
+      <visual name="rotor_3_visual">
+        <pose>-0.07627 -0.09879 -0.00433 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://qav250/meshes/propeller.STL</uri>
+            <scale>0.001 0.001 0.001</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.1 0.1 0.1 1</diffuse>
+        </material>
+      </visual>
+      <collision name="rotor_3_collision">
+        <geometry>
+          <box>
+            <size>0.127 0.012 0.001</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="rotor_3_joint" type="revolute">
+      <parent>base_link</parent>
+      <child>rotor_3</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-1e+16</lower>
+          <upper>1e+16</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <!--
+      Motores. PX4 publica velocidades en command/motor_speed; cada plugin toma
+      la de su motorNumber y aplica empuje = motorConstant * w² sobre su rotor.
+        maxRotVelocity 3000 rad/s (~28 600 rpm, típico de 2205 2300KV en 4S)
+        motorConstant  6.67e-07 -> 6 N por motor a tope, 24 N en total:
+                       relación empuje/peso ~4.4 (el real es mayor, pero así
+                       el control es más suave en simulación)
+      Deben coincidir con SIM_GZ_EC_MIN/MAX del airframe.
+    -->
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+      name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_0_joint</jointName>
+      <linkName>rotor_0</linkName>
+      <turningDirection>ccw</turningDirection>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <maxRotVelocity>3000.0</maxRotVelocity>
+      <motorConstant>6.67e-07</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorNumber>0</motorNumber>
+      <rotorDragCoefficient>1.5e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-07</rollingMomentCoefficient>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+      <motorType>velocity</motorType>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+      name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_1_joint</jointName>
+      <linkName>rotor_1</linkName>
+      <turningDirection>ccw</turningDirection>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <maxRotVelocity>3000.0</maxRotVelocity>
+      <motorConstant>6.67e-07</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorNumber>1</motorNumber>
+      <rotorDragCoefficient>1.5e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-07</rollingMomentCoefficient>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+      <motorType>velocity</motorType>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+      name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_2_joint</jointName>
+      <linkName>rotor_2</linkName>
+      <turningDirection>cw</turningDirection>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <maxRotVelocity>3000.0</maxRotVelocity>
+      <motorConstant>6.67e-07</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorNumber>2</motorNumber>
+      <rotorDragCoefficient>1.5e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-07</rollingMomentCoefficient>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+      <motorType>velocity</motorType>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+      name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_3_joint</jointName>
+      <linkName>rotor_3</linkName>
+      <turningDirection>cw</turningDirection>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <maxRotVelocity>3000.0</maxRotVelocity>
+      <motorConstant>6.67e-07</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorNumber>3</motorNumber>
+      <rotorDragCoefficient>1.5e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-07</rollingMomentCoefficient>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+      <motorType>velocity</motorType>
+    </plugin>
+    <!-- Permite simular fallas de motor (failure motor off -i N en pxh>) -->
+    <plugin filename="MotorFailurePlugin"
+      name="gz::sim::systems::MotorFailureSystem">
+    </plugin>
+  </model>
+</sdf>

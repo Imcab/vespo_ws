@@ -1,0 +1,176 @@
+"""
+@NODE@: arma, despega con el modo Takeoff de PX4, espera y aterriza.
+
+No usa OFFBOARD: solo manda comandos (VehicleCommand) y deja que los modos
+automáticos de PX4 (Takeoff, Hold, Land) hagan el vuelo. Es la forma más
+simple y segura de automatizar un vuelo.
+
+Máquina de estados (un paso cada 100 ms):
+  ESPERANDO_PX4 -> ARMANDO -> DESPEGANDO -> EN_HOVER -> ATERRIZANDO -> TERMINADO
+
+OJO: este nodo ARMA el vehículo. Pruébalo primero en simulación
+(vespo up --sim) y en el dron real sin hélices.
+
+Ejecutar (con PX4 y el agente corriendo, p. ej. vespo up):
+  ros2 run @PKG@ @NODE@
+  ros2 run @PKG@ @NODE@ --ros-args -p altitude:=3.0 -p hover_time:=5.0
+"""
+
+import math
+from enum import Enum
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from px4_msgs.msg import VehicleCommand, VehicleGlobalPosition, VehicleLocalPosition, VehicleStatus
+
+# PX4 publica con best_effort + transient_local; el QoS por defecto
+# (reliable) no recibe nada y no da ningún error.
+PX4_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+
+class State(Enum):
+    WAITING_PX4 = 'esperando a PX4'
+    ARMING = 'armando'
+    TAKING_OFF = 'despegando'
+    HOVERING = 'en hover'
+    LANDING = 'aterrizando'
+    DONE = 'terminado'
+
+
+class @CLASS@(Node):
+
+    def __init__(self):
+        super().__init__('@NODE@')
+        self.altitude = self.declare_parameter('altitude', 5.0).value       # m sobre el despegue
+        self.hover_time = self.declare_parameter('hover_time', 5.0).value   # s en el aire
+
+        self.status = VehicleStatus()
+        self.local = VehicleLocalPosition()
+        self.glob = VehicleGlobalPosition()
+        self.state = State.WAITING_PX4
+        self.state_since = self.get_clock().now()
+        self.last_command = None
+        self.takeoff_amsl = 0.0
+
+        # El sufijo _vN es la MESSAGE_VERSION del mensaje en px4_msgs.
+        self.create_subscription(VehicleStatus, '@out:VehicleStatus@',
+                                 lambda msg: setattr(self, 'status', msg), PX4_QOS)
+        self.create_subscription(VehicleLocalPosition, '@out:VehicleLocalPosition@',
+                                 lambda msg: setattr(self, 'local', msg), PX4_QOS)
+        self.create_subscription(VehicleGlobalPosition, '@out:VehicleGlobalPosition@',
+                                 lambda msg: setattr(self, 'glob', msg), PX4_QOS)
+        self.command_pub = self.create_publisher(VehicleCommand, '@in:VehicleCommand@', PX4_QOS)
+
+        self.timer = self.create_timer(0.1, self.step)
+        self.get_logger().info(
+            f'@NODE@: despegue a {self.altitude:.1f} m, hover {self.hover_time:.0f} s y aterrizaje')
+
+    def step(self):
+        armed = self.status.arming_state == VehicleStatus.ARMING_STATE_ARMED
+        alt = -self.local.z   # NED: altura = -z
+        in_state_s = (self.get_clock().now() - self.state_since).nanoseconds / 1e9
+
+        if self.state == State.WAITING_PX4:
+            # Hace falta posición válida para despegar (y la global para la altura AMSL)
+            if self.status.timestamp and self.local.z_valid and self.glob.timestamp:
+                self.change(State.ARMING)
+
+        elif self.state == State.ARMING:
+            # Reintenta cada segundo: el primer comando puede perderse (best_effort)
+            if armed:
+                # NAV_TAKEOFF pide la altura en AMSL (sobre el nivel del mar)
+                self.takeoff_amsl = self.glob.alt + self.altitude
+                self.change(State.TAKING_OFF)
+            elif self.every_second():
+                self.send_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, p1=1.0)
+
+        elif self.state == State.TAKING_OFF:
+            if not armed:
+                self.get_logger().warn('Se desarmó antes de despegar (¿COM_DISARM_PRFLT?)')
+                self.change(State.DONE)
+            elif alt > self.altitude - 0.3:
+                self.change(State.HOVERING)
+            elif (self.status.nav_state != VehicleStatus.NAVIGATION_STATE_AUTO_TAKEOFF
+                  and self.every_second()):
+                # param4 = yaw (nan: el actual), param7 = altitud AMSL
+                self.send_command(VehicleCommand.VEHICLE_CMD_NAV_TAKEOFF,
+                                  p4=math.nan, p7=self.takeoff_amsl)
+
+        elif self.state == State.HOVERING:
+            # Tras el despegue PX4 pasa solo a Hold: aquí solo esperamos
+            if in_state_s > self.hover_time:
+                self.change(State.LANDING)
+
+        elif self.state == State.LANDING:
+            if not armed:
+                self.change(State.DONE)
+            elif (self.status.nav_state != VehicleStatus.NAVIGATION_STATE_AUTO_LAND
+                  and self.every_second()):
+                self.send_command(VehicleCommand.VEHICLE_CMD_NAV_LAND)
+
+        if self.state == State.DONE:
+            self.get_logger().info('En tierra y desarmado. Fin')
+            self.timer.cancel()
+            raise SystemExit   # sale de spin() y termina el programa
+
+        self.get_logger().info(
+            f'{"ARMADO" if armed else "desarmado"} | nav={self.status.nav_state} | alt={alt:.2f} m',
+            throttle_duration_sec=1.0)
+
+    def change(self, state):
+        self.state = state
+        self.state_since = self.get_clock().now()
+        self.last_command = None
+        self.get_logger().info(f'-> {state.value}')
+
+    def every_second(self):
+        """True como mucho una vez por segundo: para reintentar comandos sin saturar."""
+        now = self.get_clock().now()
+        if self.last_command and (now - self.last_command).nanoseconds < 1e9:
+            return False
+        self.last_command = now
+        return True
+
+    def now_us(self):
+        return self.get_clock().now().nanoseconds // 1000
+
+    def send_command(self, command, p1=0.0, p2=0.0, p4=0.0, p7=0.0):
+        msg = VehicleCommand()
+        msg.command = command
+        msg.param1 = float(p1)
+        msg.param2 = float(p2)
+        msg.param4 = float(p4)
+        msg.param5 = math.nan   # latitud: nan = la actual
+        msg.param6 = math.nan   # longitud: nan = la actual
+        msg.param7 = float(p7)
+        msg.target_system = 1
+        msg.target_component = 1
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True
+        msg.timestamp = self.now_us()
+        self.command_pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = @CLASS@()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, SystemExit):
+        pass   # Ctrl+C o fin de la misión: salir sin traceback
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

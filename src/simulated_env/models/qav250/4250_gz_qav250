@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# @name Gazebo QAV250
+#
+# @type Quadrotor
+#
+# PX4 airframe for the qav250 Gazebo model in this folder. The file name
+# (<SYS_AUTOSTART>_gz_<model>) is how PX4 finds it. `vespo simulate` links
+# it into the PX4 SITL build before starting, because PX4 only looks for
+# airframes inside its own build directory.
+#
+# Based on PX4's 4001_gz_x500 (simulation setup) and 4052_holybro_qav250
+# (attitude and rate gains of the real QAV250).
+#
+
+. ${R}etc/init.d/rc.mc_defaults
+
+PX4_SIMULATOR=${PX4_SIMULATOR:=gz}
+PX4_GZ_WORLD=${PX4_GZ_WORLD:=default}
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=qav250}
+
+param set-default SIM_GZ_EN 1
+
+# Geometry: quad X, positions in metres in FRD (y to the right), matching the
+# rotor_N links of model.sdf (which is FLU, so PY has the opposite sign there).
+# KM > 0 turns CCW, KM < 0 turns CW.
+param set-default CA_AIRFRAME 0
+param set-default CA_ROTOR_COUNT 4
+
+param set-default CA_ROTOR0_PX 0.0772
+param set-default CA_ROTOR0_PY 0.0987
+param set-default CA_ROTOR0_KM 0.05
+
+param set-default CA_ROTOR1_PX -0.0772
+param set-default CA_ROTOR1_PY -0.0987
+param set-default CA_ROTOR1_KM 0.05
+
+param set-default CA_ROTOR2_PX 0.0772
+param set-default CA_ROTOR2_PY -0.0987
+param set-default CA_ROTOR2_KM -0.05
+
+param set-default CA_ROTOR3_PX -0.0772
+param set-default CA_ROTOR3_PY 0.0987
+param set-default CA_ROTOR3_KM -0.05
+
+# Motor outputs 1-4 -> Gazebo motors 0-3, in rad/s. MAX matches maxRotVelocity
+# in model.sdf; MIN is the idle speed when armed (10 %).
+param set-default SIM_GZ_EC_FUNC1 101
+param set-default SIM_GZ_EC_FUNC2 102
+param set-default SIM_GZ_EC_FUNC3 103
+param set-default SIM_GZ_EC_FUNC4 104
+
+param set-default SIM_GZ_EC_MIN1 300
+param set-default SIM_GZ_EC_MIN2 300
+param set-default SIM_GZ_EC_MIN3 300
+param set-default SIM_GZ_EC_MIN4 300
+
+param set-default SIM_GZ_EC_MAX1 3000
+param set-default SIM_GZ_EC_MAX2 3000
+param set-default SIM_GZ_EC_MAX3 3000
+param set-default SIM_GZ_EC_MAX4 3000
+
+# Hover: 0.55 kg needs 1.35 N per motor -> ~1420 rad/s -> ~0.42 of the range.
+# PX4's hover thrust estimator refines it in flight.
+param set-default MPC_THR_HOVER 0.42
+
+# Gains of the real QAV250 (4052_holybro_qav250)
+param set-default MC_ROLLRATE_P 0.076
+param set-default MC_ROLLRATE_I 0.3
+param set-default MC_ROLLRATE_D 0.0012
+param set-default MC_PITCHRATE_P 0.082
+param set-default MC_PITCHRATE_I 0.35
+param set-default MC_PITCHRATE_D 0.0012
+param set-default MC_YAWRATE_P 0.25
+param set-default MC_YAWRATE_I 0.3
+param set-default MC_ROLL_P 8
+param set-default MC_PITCH_P 8
+param set-default MC_YAW_P 4
+
+# No action on ground-station link loss. The x500 uses 2 (RTL), which also
+# makes a connected GCS (QGroundControl) a requirement to arm; this sim-only
+# airframe is meant to be flown from ROS 2 without one.
+param set-default NAV_DLL_ACT 0

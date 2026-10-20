@@ -1,0 +1,132 @@
+"""
+@NODE@: despega en modo OFFBOARD y se mantiene en hover a `altitude` metros.
+
+Flujo:
+  1. Durante ~1 s publica heartbeat (OffboardControlMode) + setpoint
+     (TrajectorySetpoint): PX4 rechaza entrar a OFFBOARD si no le llegan
+     setpoints ANTES de pedirlo.
+  2. En el ciclo 10 (1 s) manda los comandos OFFBOARD y ARM, una sola vez.
+  3. Sigue publicando heartbeat + setpoint. Si se dejan de publicar
+     (p. ej. Ctrl+C), PX4 activa el failsafe (COM_OBL_RC_ACT).
+
+OJO: este nodo ARMA el vehículo. Pruébalo primero en simulación
+(vespo up --sim) y en el dron real sin hélices.
+
+Ejecutar (con PX4 y el agente corriendo, p. ej. vespo up):
+  ros2 run @PKG@ @NODE@
+  ros2 run @PKG@ @NODE@ --ros-args -p altitude:=3.0
+"""
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from px4_msgs.msg import (OffboardControlMode, TrajectorySetpoint, VehicleCommand,
+                          VehicleLocalPosition, VehicleStatus)
+
+# PX4 publica con best_effort + transient_local. Con el QoS por defecto
+# (reliable) la suscripción no recibe nada y no da ningún error.
+PX4_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+
+class @CLASS@(Node):
+
+    def __init__(self):
+        super().__init__('@NODE@')
+        # Parámetro ROS: altura de hover en metros (cámbiala con -p altitude:=3.0).
+        self.altitude = self.declare_parameter('altitude', 5.0).value
+
+        self.status = VehicleStatus()
+        self.position = VehicleLocalPosition()
+        self.counter = 0
+
+        # Topics: el sufijo _vN es la MESSAGE_VERSION del mensaje en px4_msgs
+        # (vespo new lo calculó al crear el paquete). Si actualizas PX4 y deja de
+        # llegar algo, compáralos con: ros2 topic list | grep fmu
+        self.create_subscription(VehicleStatus, '@out:VehicleStatus@', self.on_status, PX4_QOS)
+        self.create_subscription(VehicleLocalPosition, '@out:VehicleLocalPosition@',
+                                 self.on_position, PX4_QOS)
+
+        self.offboard_pub = self.create_publisher(OffboardControlMode, '@in:OffboardControlMode@', PX4_QOS)
+        self.setpoint_pub = self.create_publisher(TrajectorySetpoint, '@in:TrajectorySetpoint@', PX4_QOS)
+        self.command_pub = self.create_publisher(VehicleCommand, '@in:VehicleCommand@', PX4_QOS)
+
+        # 10 Hz: PX4 exige el heartbeat a más de 2 Hz.
+        self.create_timer(0.1, self.loop)
+        self.get_logger().info(f'@NODE@ iniciado, hover a {self.altitude:.1f} m. Calentando setpoints...')
+
+    def on_status(self, msg):
+        self.status = msg
+
+    def on_position(self, msg):
+        self.position = msg
+
+    def loop(self):
+        # 1) Heartbeat: "sigo vivo y controlo por POSICIÓN".
+        offboard = OffboardControlMode()
+        offboard.position = True
+        offboard.timestamp = self.now_us()
+        self.offboard_pub.publish(offboard)
+
+        # 2) Setpoint en NED (x norte, y este, z ABAJO): z negativa = arriba.
+        setpoint = TrajectorySetpoint()
+        setpoint.position = [0.0, 0.0, -float(self.altitude)]
+        setpoint.yaw = 0.0   # rad; 0 = mirando al norte
+        setpoint.timestamp = self.now_us()
+        self.setpoint_pub.publish(setpoint)
+
+        # 3) Tras ~1 s de setpoints: OFFBOARD y ARM, una sola vez.
+        if self.counter == 10:
+            # DO_SET_MODE: param1 = 1 (modo custom de PX4), param2 = 6 (OFFBOARD).
+            self.send_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)
+            self.send_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+            self.get_logger().info('Comandos OFFBOARD + ARM enviados')
+        if self.counter <= 10:
+            self.counter += 1
+
+        # 4) Log, como mucho una vez por segundo.
+        armed = self.status.arming_state == VehicleStatus.ARMING_STATE_ARMED
+        self.get_logger().info(
+            f'{"ARMADO" if armed else "desarmado"} | nav={self.status.nav_state} '
+            f'| alt={-self.position.z:.2f} m',
+            throttle_duration_sec=1.0)
+
+    def now_us(self):
+        """Tiempo en microsegundos, la unidad de los timestamps de PX4."""
+        return self.get_clock().now().nanoseconds // 1000
+
+    def send_command(self, command, p1=0.0, p2=0.0):
+        """Publica un VehicleCommand (el equivalente a un comando MAVLink)."""
+        msg = VehicleCommand()
+        msg.command = command
+        msg.param1 = float(p1)
+        msg.param2 = float(p2)
+        msg.target_system = 1      # el dron
+        msg.target_component = 1   # el autopiloto
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True   # viene de fuera de PX4 (de ROS 2)
+        msg.timestamp = self.now_us()
+        self.command_pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = @CLASS@()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass   # Ctrl+C: salir sin traceback
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

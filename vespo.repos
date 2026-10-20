@@ -1,0 +1,22 @@
+# Third-party repositories for the workspace, cloned into src/.
+#
+# Fresh machine:   vcs import src < vespo.repos      (vespo init does it)
+# Check status:    vcs status src
+#
+# Commits are pinned so every team member builds the exact same code.
+# px4_msgs MUST carry the same messages as the PX4-Autopilot commit in
+# vespo.toml; `vespo px4 update` bumps both together.
+#
+# PX4-Autopilot is intentionally NOT listed: it lives outside src/ because it
+# ships its own package.xml and colcon would try to build it.
+
+repositories:
+  px4_msgs:
+    type: git
+    url: https://github.com/PX4/px4_msgs.git
+    version: 86d8239e962f6939e05c3737784f60c02fa884db  # release/1.17, same messages as PX4 v1.17.0
+
+  Micro-XRCE-DDS-Agent:
+    type: git
+    url: https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
+    version: v2.4.3

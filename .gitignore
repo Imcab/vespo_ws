@@ -1,0 +1,21 @@
+# colcon
+build/
+install/
+log/
+
+# Machine-specific settings written by `vespo init`
+vespo.local.toml
+
+# Python environment of the vespo CLI, created by bootstrap.sh
+.venv/
+
+# Third-party repos, pulled with: vcs import src < vespo.repos
+src/px4_msgs/
+src/Micro-XRCE-DDS-Agent/
+
+# VS Code: local settings and IntelliSense caches (browse.vc.db can be >1 GB)
+.vscode/
+
+# Python
+__pycache__/
+*.egg-info/

@@ -1,0 +1,194 @@
+"""
+@NODE@: misión OFFBOARD por una lista de waypoints y aterrizaje.
+
+Los waypoints son un parámetro ROS: una lista plana [x0, y0, alt0, x1, ...]
+en metros, con x = norte, y = este respecto al punto donde arrancó PX4
+(ROS 2 no tiene "lista de listas": se aplana y se recorre de 3 en 3).
+
+Flujo:
+  1. ~1 s de heartbeat + setpoint antes de pedir OFFBOARD (PX4 lo exige).
+  2. OFFBOARD + ARM.
+  3. Va a cada waypoint mirando hacia donde avanza; al llegar (a menos de
+     `tolerance` m) espera `hold_time` s y pasa al siguiente.
+  4. Al terminar pide LAND (modo automático de PX4) y sale al desarmar.
+
+OJO: este nodo ARMA el vehículo. Pruébalo primero en simulación
+(vespo up --sim) y en el dron real sin hélices.
+
+Ejecutar (con PX4 y el agente corriendo, p. ej. vespo up):
+  ros2 run @PKG@ @NODE@
+  ros2 run @PKG@ @NODE@ --ros-args -p "waypoints:=[0.0, 0.0, 3.0, 4.0, 0.0, 3.0]"
+"""
+
+import math
+from enum import Enum
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+
+from px4_msgs.msg import (OffboardControlMode, TrajectorySetpoint, VehicleCommand,
+                          VehicleLocalPosition, VehicleStatus)
+
+PX4_QOS = QoSProfile(
+    reliability=ReliabilityPolicy.BEST_EFFORT,
+    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+    history=HistoryPolicy.KEEP_LAST,
+    depth=1,
+)
+
+# Por defecto: un cuadrado de 5 m a 5 m de altura que vuelve al inicio
+SQUARE = [0.0, 0.0, 5.0, 5.0, 0.0, 5.0, 5.0, 5.0, 5.0, 0.0, 5.0, 5.0, 0.0, 0.0, 5.0]
+
+
+class State(Enum):
+    WARM_UP = 1
+    FLYING = 2
+    HOLDING = 3
+    LANDING = 4
+
+
+class @CLASS@(Node):
+
+    def __init__(self):
+        super().__init__('@NODE@')
+        flat = list(self.declare_parameter('waypoints', SQUARE).value)
+        self.tolerance = self.declare_parameter('tolerance', 0.3).value   # m
+        self.hold_time = self.declare_parameter('hold_time', 1.0).value   # s en cada waypoint
+
+        # Mejor fallar al arrancar que en el aire
+        if not flat or len(flat) % 3:
+            raise ValueError(f'waypoints debe tener x, y, alt por punto (múltiplo de 3), tiene {len(flat)}')
+        # De [x0, y0, alt0, x1, ...] a [(x0, y0, z0), ...] en NED (z hacia abajo)
+        self.waypoints = [(flat[i], flat[i + 1], -flat[i + 2]) for i in range(0, len(flat), 3)]
+
+        self.status = VehicleStatus()
+        self.local = VehicleLocalPosition()
+        self.state = State.WARM_UP
+        self.current = 0
+        self.ticks = 0
+        self.yaw = 0.0
+        self.hold_since = None
+        self.last_command = None
+
+        # El sufijo _vN es la MESSAGE_VERSION del mensaje en px4_msgs.
+        self.create_subscription(VehicleStatus, '@out:VehicleStatus@',
+                                 lambda msg: setattr(self, 'status', msg), PX4_QOS)
+        self.create_subscription(VehicleLocalPosition, '@out:VehicleLocalPosition@',
+                                 lambda msg: setattr(self, 'local', msg), PX4_QOS)
+        self.offboard_pub = self.create_publisher(OffboardControlMode, '@in:OffboardControlMode@', PX4_QOS)
+        self.setpoint_pub = self.create_publisher(TrajectorySetpoint, '@in:TrajectorySetpoint@', PX4_QOS)
+        self.command_pub = self.create_publisher(VehicleCommand, '@in:VehicleCommand@', PX4_QOS)
+
+        self.create_timer(0.1, self.step)
+        self.get_logger().info(f'@NODE@: {len(self.waypoints)} waypoints')
+
+    def step(self):
+        armed = self.status.arming_state == VehicleStatus.ARMING_STATE_ARMED
+        nav = self.status.nav_state
+
+        if self.state == State.LANDING:
+            # En LAND manda PX4: ya no publicamos setpoints
+            if not armed:
+                self.get_logger().info('En tierra y desarmado. Fin')
+                raise SystemExit
+            if nav != VehicleStatus.NAVIGATION_STATE_AUTO_LAND and self.every_second():
+                self.send_command(VehicleCommand.VEHICLE_CMD_NAV_LAND)
+            return
+
+        target = self.waypoints[self.current]
+        self.publish_setpoint(target)
+
+        if self.state == State.WARM_UP:
+            # Tras ~1 s de setpoints, OFFBOARD y ARM; reintenta cada segundo
+            self.ticks += 1
+            if self.ticks < 10:
+                return
+            if armed and nav == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+                self.get_logger().info(f'En OFFBOARD, hacia el waypoint 1/{len(self.waypoints)}')
+                self.state = State.FLYING
+            elif self.every_second():
+                self.send_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1.0, 6.0)   # 6 = OFFBOARD
+                self.send_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+            return
+
+        # Si algo (RC, failsafe, QGC) saca al dron de OFFBOARD, abandonamos
+        if nav != VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+            self.get_logger().warn(f'Fuera de OFFBOARD (nav={nav}): misión abortada')
+            raise SystemExit
+
+        if self.state == State.FLYING:
+            if self.distance_to(target) < self.tolerance:
+                self.get_logger().info(f'Waypoint {self.current + 1}/{len(self.waypoints)} alcanzado')
+                self.state = State.HOLDING
+                self.hold_since = self.get_clock().now()
+
+        elif self.state == State.HOLDING:
+            if (self.get_clock().now() - self.hold_since).nanoseconds / 1e9 >= self.hold_time:
+                self.current += 1
+                if self.current == len(self.waypoints):
+                    self.get_logger().info('Misión completa, aterrizando')
+                    self.state = State.LANDING
+                else:
+                    self.get_logger().info(f'Hacia el waypoint {self.current + 1}/{len(self.waypoints)}')
+                    self.state = State.FLYING
+
+    def publish_setpoint(self, position):
+        offboard = OffboardControlMode()
+        offboard.position = True
+        offboard.timestamp = self.now_us()
+        self.offboard_pub.publish(offboard)
+
+        # Mira hacia el waypoint mientras está lejos; cerca conserva el último yaw
+        dx, dy = position[0] - self.local.x, position[1] - self.local.y
+        if math.hypot(dx, dy) > 1.0:
+            self.yaw = math.atan2(dy, dx)
+
+        setpoint = TrajectorySetpoint()
+        setpoint.position = [float(v) for v in position]
+        setpoint.yaw = self.yaw
+        setpoint.timestamp = self.now_us()
+        self.setpoint_pub.publish(setpoint)
+
+    def distance_to(self, p):
+        return math.dist(p, (self.local.x, self.local.y, self.local.z))
+
+    def every_second(self):
+        now = self.get_clock().now()
+        if self.last_command and (now - self.last_command).nanoseconds < 1e9:
+            return False
+        self.last_command = now
+        return True
+
+    def now_us(self):
+        return self.get_clock().now().nanoseconds // 1000
+
+    def send_command(self, command, p1=0.0, p2=0.0):
+        msg = VehicleCommand()
+        msg.command = command
+        msg.param1 = float(p1)
+        msg.param2 = float(p2)
+        msg.target_system = 1
+        msg.target_component = 1
+        msg.source_system = 1
+        msg.source_component = 1
+        msg.from_external = True
+        msg.timestamp = self.now_us()
+        self.command_pub.publish(msg)
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = @CLASS@()
+    try:
+        rclpy.spin(node)
+    except (KeyboardInterrupt, SystemExit):
+        pass   # Ctrl+C o fin de la misión: salir sin traceback
+    finally:
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
