@@ -64,7 +64,7 @@ ln -sf "$VENV/bin/vespo" "$HOME/.local/bin/vespo"
 
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) ;;
-  *) say "~/.local/bin is not on PATH yet. Log out and back in, or run: $VENV/bin/vespo" ;;
+  *) say "~/.local/bin is not on PATH yet: vespo init adds it to ~/.bashrc, so it works in new terminals" ;;
 esac
 
 exec "$VENV/bin/vespo" init "$@"

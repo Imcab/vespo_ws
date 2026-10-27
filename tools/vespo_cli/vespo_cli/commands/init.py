@@ -14,6 +14,9 @@ from . import load_config
 from .build import colcon_command, run_colcon
 from .doctor import ROSDEP_LIST
 
+# Asked after the build, in this order, so workspace models and worlds are offered
+SIM_DEFAULTS = ("sim_model", "sim_world", "sim_pose", "sim_follow", "sim_headless")
+
 
 def _save(cfg, setting, value):
     if value is not None:
@@ -49,9 +52,12 @@ def init(
     explicit = {"role": role, "domain_id": domain_id, "flight_controller": flight_controller,
                 "px4_path": px4_path, "serial": serial, "baud": baud}
 
-    # 1. Settings, role first: it decides which of the others apply
+    # 1. Settings, role first: it decides which of the others apply. The
+    # simulation defaults wait until after the build (step 5)
     ui.header("Machine settings")
     for setting in settings.SETTINGS.values():
+        if setting.name in SIM_DEFAULTS:
+            continue
         if setting.name != "role" and not setting.applies(cfg, cfg.role):
             continue
         cfg = _save(cfg, setting, setting.ask(cfg, explicit.get(setting.name), yes))
@@ -84,9 +90,19 @@ def init(
             ui.abort("Build failed, see the output above. Re-run with: vespo build")
         ui.ok("Workspace built")
 
-    # 5. Shell
+    # 5. Simulation defaults. Their menus list the models and worlds that
+    # workspace packages install, which only exist once the build has run
+    sim_settings = [settings.SETTINGS[name] for name in SIM_DEFAULTS
+                    if settings.SETTINGS[name].applies(cfg, cfg.role)]
+    if sim_settings:
+        ui.header("Simulation defaults")
+        for setting in sim_settings:
+            cfg = _save(cfg, setting, setting.ask(cfg, None, yes))
+        ui.ok(f"Saved to {cfg.local_path.name}")
+
+    # 6. Shell
     ui.header("Shell")
-    if settings.confirm("Add the workspace and ROS_DOMAIN_ID to ~/.bashrc?", shell, yes, True):
+    if settings.confirm("Add vespo, the workspace and ROS_DOMAIN_ID to ~/.bashrc?", shell, yes, True):
         changed = bashrc.write(cfg)
         ui.ok("~/.bashrc updated (new terminals)" if changed else "~/.bashrc already up to date")
     completion = bashrc.install_completion()
@@ -96,4 +112,5 @@ def init(
         ui.ok("Tab completion installed (new terminals)" if completion else "Tab completion up to date")
 
     ui.console.print("")
-    ui.ok(f"{cfg.role} machine ready. Check everything with: vespo doctor")
+    ui.ok(f"{cfg.role} machine ready")
+    ui.info("Open a new terminal (or run: source ~/.bashrc), then check everything with: vespo doctor")

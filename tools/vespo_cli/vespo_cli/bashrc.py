@@ -1,6 +1,6 @@
 """
-The block vespo keeps in ~/.bashrc: workspace overlay, ROS_DOMAIN_ID and
-VESPO_WS. It sits between two marker lines and is rewritten as a whole, so
+The block vespo keeps in ~/.bashrc: ~/.local/bin on PATH, workspace
+overlay, ROS_DOMAIN_ID and VESPO_WS. It sits between two marker lines and is rewritten as a whole, so
 running init again never duplicates lines or touches anything else.
 
 Tab completion is not part of the block: its script goes where
@@ -30,6 +30,9 @@ def block(cfg):
     return "\n".join([
         BEGIN,
         "# Written by `vespo init` / `vespo config`. Edits here are overwritten.",
+        # bootstrap.sh links vespo into ~/.local/bin, which Ubuntu's ~/.profile
+        # only puts on PATH at login, and only if the folder already existed
+        'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac',
         f"export VESPO_WS={ws}",
         f"export ROS_DOMAIN_ID={int(cfg.get('ros.domain_id', 0))}",
         f"[ -f {ws}/install/setup.bash ] && source {ws}/install/setup.bash",
