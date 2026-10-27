@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(environment_description)
+project(simulated_env)
 
 find_package(ament_cmake REQUIRED)
 

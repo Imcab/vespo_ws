@@ -9,6 +9,9 @@ vespo.local.toml
 # Python environment of the vespo CLI, created by bootstrap.sh
 .venv/
 
+# Python environment of tools/aruco (OpenCV), see tools/aruco/README.md
+venv/
+
 # Third-party repos, pulled with: vcs import src < vespo.repos
 src/px4_msgs/
 src/Micro-XRCE-DDS-Agent/
@@ -19,3 +22,11 @@ src/Micro-XRCE-DDS-Agent/
 # Python
 __pycache__/
 *.egg-info/
+
+# Personal files kept in resources/ that are not part of the project
+resources/*.stp
+resources/Carta recomendacion.pdf
+resources/RC-HL-2025-Rules.pdf
+resources/Simulador_Voces_de_Copal.html
+resources/mysqlsampledatabase.*
+resources/xampp-*.run

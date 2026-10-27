@@ -36,10 +36,10 @@ The toolkit takes care of three things:
 - **OpenCV (cv2)** with the `aruco` contrib module
 - **PyYAML** (already installed with ROS 2)
 - **Gazebo Harmonic** (`gz sim`)
-- **ROS 2 Humble** with `ros-humble-cv-bridge` (for the detection side)
+- **ROS 2 Jazzy** with `ros-jazzy-cv-bridge` (for the detection side)
 
 This toolkit is **not** a ROS 2 package. It is plain Python that writes files
-into the `vespo_description` package, so it needs no `colcon build` and no
+into the `simulated_env` package, so it needs no `colcon build` and no
 sourcing of the workspace to run.
 
 ---
@@ -48,14 +48,21 @@ sourcing of the workspace to run.
 
 ### Step 1: Install Python dependencies
 
+Ubuntu 24.04 does not allow pip installs into the system Python, and its
+`python3-opencv` (4.6) is too old for `cv2.aruco.generateImageMarker`, so the
+toolkit gets its own environment in `venv/` at the workspace root (ignored by
+git and by colcon):
+
 ```bash
-pip install opencv-python opencv-contrib-python
+python3 -m venv venv
+touch venv/COLCON_IGNORE
+venv/bin/pip install opencv-python opencv-contrib-python pyyaml
 ```
 
 Verify the installation:
 
 ```bash
-python3 -c "import cv2, cv2.aruco, yaml; print('OpenCV:', cv2.__version__)"
+venv/bin/python -c "import cv2, cv2.aruco, yaml; print('OpenCV:', cv2.__version__)"
 ```
 
 ### Step 2: Go to the workspace root
@@ -81,11 +88,11 @@ is a module that gets imported, never executed directly.
 ## Quick start
 
 ```bash
-python3 tools/aruco/aruco_generator.py
+venv/bin/python tools/aruco/aruco_generator.py
 ```
 
 Choose option `3`, answer the questions, and you get one Gazebo model folder per
-marker inside `src/environment_description/models/aruco_markers/`, plus a `tags.yaml`
+marker inside `src/simulated_env/models/aruco_markers/`, plus a `tags.yaml`
 for your world.
 
 ---
@@ -115,7 +122,7 @@ Option `3` asks four questions:
 
 **Which world are these markers for?**
 A short name with no spaces or slashes, e.g. `practice` or `tmr_final`. It
-becomes a folder under `vespo_description/worlds/`, and each world keeps its own
+becomes a folder under `simulated_env/worlds/`, and each world keeps its own
 `tags.yaml`, so the same marker can be placed differently in different worlds.
 
 **How many markers do you want to generate?**
@@ -138,7 +145,7 @@ second question.
 For each marker ID, a complete Gazebo model:
 
 ```
-src/vespo_description/models/aruco_markers/arucotag_100/
+src/simulated_env/models/aruco_markers/arucotag_100/
 ├── arucotag_100.png    the texture
 ├── model.config        metadata Gazebo needs to recognise the folder
 └── model.sdf           the geometry, a 0.20 m plane with the texture on it
@@ -147,7 +154,7 @@ src/vespo_description/models/aruco_markers/arucotag_100/
 And in the world folder:
 
 ```
-src/vespo_description/worlds/practice/
+src/simulated_env/worlds/practice/
 └── tags.yaml           which markers this world has, and where each one goes
 ```
 
@@ -194,7 +201,7 @@ built, so the naming can never drift apart between the XML and the filesystem.
 
 It is also what makes the toolkit relocatable. `aruco_paths.py` derives
 `WORKSPACE_ROOT` from its own file location and points `MODELS_DIR` and
-`WORLDS_DIR` at `src/vespo_description/`. Moving the toolkit means editing those
+`WORLDS_DIR` at `src/simulated_env/`. Moving the toolkit means editing those
 few lines and nothing else.
 
 ### Why the size is a constant
@@ -226,8 +233,8 @@ both directories have to be listed:
 
 ```bash
 export GZ_SIM_RESOURCE_PATH=\
-$VESPO_WS/src/vespo_description/models:\
-$VESPO_WS/src/vespo_description/models/aruco_markers:\
+$VESPO_WS/src/simulated_env/models:\
+$VESPO_WS/src/simulated_env/models/aruco_markers:\
 $GZ_SIM_RESOURCE_PATH
 ```
 

@@ -54,14 +54,14 @@ MARKER_SIZE_METERS = 0.20
 def get_tags_config_path(world_name):
     """
     Returns the path of the YAML holding the tag poses for a given world,
-    e.g. <vespo_description>/worlds/practice/tags.yaml
+    e.g. <simulated_env>/worlds/practice/tags.yaml
     """
     return get_world_dir(world_name) / "tags.yaml"
 
 
 def get_world_dir(world_name):
     """
-    Returns the directory of a world, e.g. <vespo_description>/worlds/practice/
+    Returns the directory of a world, e.g. <simulated_env>/worlds/practice/
     Each world keeps its own tags.yaml and its own .sdf file.
     """
     return WORLDS_DIR / world_name
@@ -70,7 +70,7 @@ def get_world_dir(world_name):
 def get_world_file(world_name):
     """
     Returns the path of a world's SDF file,
-    e.g. <vespo_description>/worlds/practice/practice.sdf
+    e.g. <simulated_env>/worlds/practice/practice.sdf
     """
     return get_world_dir(world_name) / f"{world_name}.sdf"
 
@@ -97,7 +97,7 @@ def get_marker_name(marker_id):
 def get_marker_dir(marker_id):
     """
     Returns the directory of a marker's Gazebo model,
-    e.g. <vespo_description>/models/aruco_markers/arucotag_100/
+    e.g. <simulated_env>/models/aruco_markers/arucotag_100/
     """
     return MODELS_DIR / get_marker_name(marker_id)
 
@@ -113,7 +113,7 @@ def get_texture_filename(marker_id):
 def get_texture_path(marker_id):
     """
     Returns the full path where a marker's PNG is written, e.g.
-    <vespo_description>/models/aruco_markers/arucotag_100/arucotag_100.png
+    <simulated_env>/models/aruco_markers/arucotag_100/arucotag_100.png
     """
     return get_marker_dir(marker_id) / get_texture_filename(marker_id)
 

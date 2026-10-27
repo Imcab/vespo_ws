@@ -1,9 +1,13 @@
 # Where `vespo simulate --world tmr_field` places the vehicle unless --pose
 # is given.
 #
-#   pose: [x, y, z, yaw]   metres and degrees; z and yaw are optional
+#   x, y, z   metres; z is optional
+#   yaw_deg   degrees, optional
 #
 # The arena floor spans (0,0)-(10,10) with walls on its edges, so (0,0) is a
 # corner inside two walls. This puts the vehicle at the centre of the
 # free_path strip (x 0.2-1.2, y 2-6), facing +x, towards the gates.
-pose: [0.7, 4.0, 0.25, 0]
+x: 0.7
+y: 4.0
+z: 0.25
+yaw_deg: 0
