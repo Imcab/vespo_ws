@@ -63,7 +63,7 @@ public:
     //   status_ = *msg -> el * "desreferencia" el puntero: copia el mensaje
     // El topic lleva _v4 porque VehicleStatus tiene MESSAGE_VERSION = 4.
     status_sub_ = create_subscription<VehicleStatus>(
-      "/fmu/out/vehicle_status_v4", qos,
+      "/fmu/out/vehicle_status_v1", qos,
       [this](const VehicleStatus::SharedPtr msg) {
         status_ = *msg;
       });

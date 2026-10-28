@@ -43,7 +43,7 @@ class Controller : public rclcpp::Node{
       // Crea un subscriptor de un VehicleStatus que es practicamente todo el status del vehiculo, lo usamos como
       // heartbeat
       status_sub_ = create_subscription<VehicleStatus>(
-        "/fmu/out/vehicle_status_v4", qos,
+        "/fmu/out/vehicle_status_v1", qos,
         [this](const VehicleStatus::SharedPtr msg){
           status_ = *msg;
       });

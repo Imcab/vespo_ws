@@ -2,7 +2,7 @@
 // telemetry_listener: solo LEE datos del dron (no manda nada a PX4).
 //
 // Se suscribe a:
-//   /fmu/out/vehicle_status_v4           -> armado y modo de vuelo
+//   /fmu/out/vehicle_status_v1           -> armado y modo de vuelo
 //   /fmu/out/vehicle_local_position_v1   -> posición/velocidad local (NED, metros)
 //   /fmu/out/vehicle_global_position     -> latitud, longitud, altitud GPS
 //   /fmu/out/vehicle_attitude            -> orientación (cuaternión -> roll/pitch/yaw)
@@ -49,7 +49,7 @@ public:
 
     // Sufijo _v4: VehicleStatus tiene MESSAGE_VERSION = 4.
     status_sub_ = create_subscription<VehicleStatus>(
-      "/fmu/out/vehicle_status_v4", qos,
+      "/fmu/out/vehicle_status_v1", qos,
       [this](const VehicleStatus::SharedPtr msg) {status_ = *msg;});
 
     // Sufijo _v1: VehicleLocalPosition tiene MESSAGE_VERSION = 1.
