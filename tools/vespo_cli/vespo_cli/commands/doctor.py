@@ -96,7 +96,8 @@ def check_workspace(r, cfg):
         head = system.git_head(path)
         r.check(wanted and head == wanted, f"{name} at the pinned version",
                 f"{name} is not at the pinned version {spec.get('version')}",
-                f"cd src/{name} && git fetch && git checkout {spec.get('version')}")
+                "vespo px4 sync" if name == "px4_msgs"
+                else f"cd src/{name} && git fetch && git checkout {spec.get('version')}")
 
     skip = set(cfg.role_spec().get("skip", []))
     for pkg in ("px4_msgs", "microxrcedds_agent"):
@@ -115,7 +116,7 @@ def check_px4(r, cfg):
     head = system.git_head(px4)
     pinned = cfg.get("px4.commit")
     r.check(head == pinned, f"PX4-Autopilot at {cfg.get('px4.ref')} ({px4})",
-            f"PX4-Autopilot is not at the pinned {cfg.get('px4.ref')}", "vespo px4 update " + str(pinned)[:10])
+            f"PX4-Autopilot is not at the pinned {cfg.get('px4.ref')}", "vespo px4 sync")
 
     repo = cfg.ws / "src" / "px4_msgs"
     if (repo / ".git").exists():
@@ -123,7 +124,7 @@ def check_px4(r, cfg):
                                             msgs.message_blobs(repo, system.git_head(repo)) or {})
         r.check(not (missing or extra or changed), "px4_msgs matches PX4's messages",
                 f"px4_msgs differs from PX4 ({len(missing)} missing, {len(extra)} extra, {len(changed)} changed)",
-                "vespo px4 update")
+                "vespo px4 sync")
 
     r.check((px4 / "build" / "px4_sitl_default" / "bin" / "px4").is_file(), "PX4 SITL built",
             "PX4 SITL not built yet", "vespo simulate (builds it on the first run)", warn_only=True)

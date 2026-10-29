@@ -52,4 +52,12 @@ tools/          vespo CLI (not a colcon package)
 PX4-Autopilot lives outside the workspace (e.g. `../PX4-Autopilot`); each
 machine sets its path with `vespo init`.
 
+## PX4 version
+
+Everyone uses the PX4 pinned in `vespo.toml`. If `vespo doctor` says PX4 or
+px4_msgs is not at the pinned version (e.g. PX4 was cloned from `main`, which
+is 1.18), run `vespo px4 sync`: it checks out the pinned version on this
+machine and rebuilds, without changing the pin. `vespo px4 update` is only for
+moving the whole team to another PX4 version.
+
 See [tools/vespo_cli/README.md](tools/vespo_cli/README.md) for every command.

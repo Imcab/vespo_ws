@@ -9,10 +9,11 @@ from typing import Annotated, Optional
 import typer
 import yaml
 
-from .. import bashrc, completion, config, fx, procs, settings, ui
+from .. import bashrc, completion, config, fx, procs, settings, system, ui
 from . import load_config
 from .build import colcon_command, run_colcon
 from .doctor import ROSDEP_LIST
+from .px4 import in_sync, sync_machine
 
 # Asked after the build, in this order, so workspace models and worlds are offered
 SIM_DEFAULTS = ("sim_model", "sim_world", "sim_pose", "sim_follow", "sim_headless")
@@ -40,6 +41,7 @@ def init(
     serial: Annotated[Optional[str], typer.Option("--serial", help="Serial device to the flight controller.", autocompletion=completion.serial_ports)] = None,
     baud: Annotated[Optional[int], typer.Option("--baud", help="Serial baud rate.")] = None,
     clone: Annotated[Optional[bool], typer.Option("--clone/--no-clone", help="Clone the pinned repos.")] = None,
+    px4_sync: Annotated[Optional[bool], typer.Option("--px4-sync/--no-px4-sync", help="Put PX4 at the team version.")] = None,
     deps: Annotated[Optional[bool], typer.Option("--deps/--no-deps", help="rosdep install (uses sudo).")] = None,
     build: Annotated[Optional[bool], typer.Option("--build/--no-build", help="Build the workspace.")] = None,
     shell: Annotated[Optional[bool], typer.Option("--bashrc/--no-bashrc", help="Add the workspace to ~/.bashrc.")] = None,
@@ -73,6 +75,19 @@ def init(
             if procs.run(["vcs", "import", "--input", str(cfg.repos_path), "src"], cwd=cfg.ws) != 0:
                 ui.abort("vcs import failed")
             ui.ok("Repositories cloned")
+
+    # 2b. PX4-Autopilot and px4_msgs at the team version. Without rebuilding:
+    # the build of step 4 builds px4_msgs anyway
+    px4 = cfg.get("px4.path")
+    if px4 and system.is_px4_tree(px4) and (cfg.ws / "src" / "px4_msgs" / ".git").exists():
+        ui.header("PX4")
+        ref = cfg.get("px4.ref", "?")
+        if in_sync(cfg):
+            ui.ok(f"PX4-Autopilot and px4_msgs at the team version {ref}")
+        elif settings.confirm(f"PX4 is not at the team version {ref}. Check it out now?", px4_sync, yes, True):
+            sync_machine(cfg, rebuild=False)
+        else:
+            ui.warn("PX4 left as is. vespo doctor will keep reporting it; fix it with: vespo px4 sync")
 
     # 3. System dependencies of the packages in src/
     ui.header("Dependencies")
