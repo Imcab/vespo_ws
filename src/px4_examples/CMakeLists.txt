@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(px4_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 
 # Lista de nodos del paquete. Cada nombre corresponde a src/<nombre>.cpp y se
 # convierte en un ejecutable: ros2 run px4_examples <nombre>.
@@ -23,6 +24,15 @@ set(NODES
   velocity_control     # offboard: control por velocidad (NED y marco del cuerpo)
   orbit_command        # sin offboard: Takeoff + Orbit + Return con comandos de PX4
   goto_mission         # sin offboard: el cuadrado con DO_REPOSITION y Return
+  battery_monitor      # lee la batería, avisa bajo un % y opcionalmente RTL / LAND
+  flight_mode_monitor  # imprime cada cambio de modo, armado y failsafe
+  gps_status           # calidad del GPS y si ya se puede volar
+  battery_publisher    # publica el % de batería en /vespo/battery_percent
+  battery_subscriber   # lee /vespo/battery_percent y lo muestra como barra
+  motor_test           # gira UN motor (o todos en orden) desarmado, sin hélices
+  return_home          # se aleja y regresa con Return, mostrando cada fase
+  change_speed         # cambia la velocidad en pleno vuelo con DO_CHANGE_SPEED
+  set_home             # mueve la casa con DO_SET_HOME y aterriza ahí con Return
 )
 
 # foreach repite el bloque para cada nombre de la lista (como un for en Python).
@@ -34,7 +44,7 @@ foreach(node ${NODES})
     $<INSTALL_INTERFACE:include>)
   target_compile_features(${node} PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
   # Enlaza las librerías que usa cada nodo (headers + bibliotecas).
-  ament_target_dependencies(${node} rclcpp px4_msgs)
+  ament_target_dependencies(${node} rclcpp px4_msgs std_msgs)
   # Instala el ejecutable donde "ros2 run" lo busca.
   install(TARGETS ${node}
     DESTINATION lib/${PROJECT_NAME})
