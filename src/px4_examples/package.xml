@@ -3,7 +3,7 @@
 <package format="3">
   <name>px4_examples</name>
   <version>0.0.0</version>
-  <description>Ejemplos de ROS 2 con PX4: telemetría, IMU, despegue offboard y misión del cuadrado</description>
+  <description>Ejemplos de ROS 2 con PX4: telemetría, IMU, despegue y misiones offboard (cuadrado, órbita, 8, velocidad) y control con comandos (órbita, goto)</description>
   <maintainer email="cabreratrejoimadjared@gmail.com">Imad Jared</maintainer>
   <license>Apache-2.0</license>
 

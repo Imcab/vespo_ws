@@ -61,7 +61,7 @@ public:
     //   [this]        -> la lambda puede usar los atributos del nodo (status_)
     //   (... msg)     -> recibe el mensaje como SharedPtr (un puntero)
     //   status_ = *msg -> el * "desreferencia" el puntero: copia el mensaje
-    // El topic lleva _v4 porque VehicleStatus tiene MESSAGE_VERSION = 4.
+    // El topic lleva _v1 porque VehicleStatus tiene MESSAGE_VERSION = 1 (PX4 v1.17).
     status_sub_ = create_subscription<VehicleStatus>(
       "/fmu/out/vehicle_status_v1", qos,
       [this](const VehicleStatus::SharedPtr msg) {

@@ -18,6 +18,11 @@ set(NODES
   takeoff_mission      # despegue offboard y hover a 5 m (paso 2)
   telemetry_listener   # solo lee estado, posición, GPS, actitud y batería
   imu_listener         # solo lee giroscopio y acelerómetro
+  orbit_mission        # offboard: círculo calculado por nosotros, mirando al centro
+  figure_eight         # offboard: un 8 con feedforward de velocidad y aceleración
+  velocity_control     # offboard: control por velocidad (NED y marco del cuerpo)
+  orbit_command        # sin offboard: Takeoff + Orbit + Return con comandos de PX4
+  goto_mission         # sin offboard: el cuadrado con DO_REPOSITION y Return
 )
 
 # foreach repite el bloque para cada nombre de la lista (como un for en Python).
