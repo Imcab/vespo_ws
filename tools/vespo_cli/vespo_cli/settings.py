@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-import click
 import typer
 from rich.markup import escape
 
@@ -23,15 +22,34 @@ NONE = "none"  # flight controller choice meaning "not decided / not listed"
 # Prompt helpers
 # ---------------------------------------------------------------------------
 
-def ask(question, default, explicit, yes, flag, type=None):
-    """Value from the flag if given, the default under --yes, else a prompt."""
+def ask(question, default, explicit, yes, flag, type=None, check=None):
+    """
+    Value from the flag if given, the default under --yes, else a prompt.
+    `type` is a plain Python type (int, str...): typer >= 0.28 has its own copy of
+    click and rejects click's types, so ranges are checked here with `check`, which
+    returns an error message or None.
+    """
     if explicit is not None:
         return explicit
     if yes:
         if default is None:
             ui.abort(f"{flag} is required with --yes")
         return default
-    return typer.prompt(question, default=default, type=type)
+    while True:
+        answer = typer.prompt(question, default=default, type=type)
+        error = check(answer) if check else None
+        if error is None:
+            return answer
+        ui.warn(error)
+
+
+def in_range(low, high=None):
+    """A `check` for ask(): the number has to be between low and high (inclusive)."""
+    def check(value):
+        if value < low or (high is not None and value > high):
+            return f"Type a number from {low} to {high}" if high is not None else f"Type a number of at least {low}"
+        return None
+    return check
 
 
 def confirm(question, explicit, yes, default):
@@ -83,7 +101,7 @@ def ask_role(cfg, explicit, yes):
 
 
 def ask_domain_id(cfg, explicit, yes):
-    return ask("ROS_DOMAIN_ID", cfg.get("ros.domain_id", 0), explicit, yes, "--domain-id", click.IntRange(0, 232))
+    return ask("ROS_DOMAIN_ID", cfg.get("ros.domain_id", 0), explicit, yes, "--domain-id", int, in_range(0, 232))
 
 
 def ask_flight_controller(cfg, explicit, yes):
@@ -142,7 +160,7 @@ def ask_qgc_path(cfg, explicit, yes):
 
 
 def ask_baud(cfg, explicit, yes):
-    return ask("Baud rate", cfg.get("agent.baud", 921600), explicit, yes, "--baud", click.IntRange(min=1))
+    return ask("Baud rate", cfg.get("agent.baud", 921600), explicit, yes, "--baud", int, in_range(1))
 
 
 # Simulation defaults, used by `vespo simulate --default`
