@@ -1,0 +1,345 @@
+% =============================================================================
+\section{Comandos: PX4 vuela}
+% =============================================================================
+
+\begin{frame}{Los seis ejemplos con comandos}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    Nodo & Qué hace & Comandos \\
+    \midrule
+    \cmd{orbit\_command} & despega, orbita, regresa & TAKEOFF, DO\_ORBIT, RETURN \\
+    \cmd{goto\_mission} & el cuadrado por coordenadas GPS & TAKEOFF, DO\_REPOSITION, RETURN \\
+    \cmd{return\_home} & se aleja y muestra las fases de Return & TAKEOFF, DO\_REPOSITION, RETURN \\
+    \cmd{change\_speed} & cambia la velocidad en pleno vuelo & DO\_REPOSITION, DO\_CHANGE\_SPEED \\
+    \cmd{set\_home} & mueve ``casa'' y aterriza ahí & DO\_SET\_HOME, RETURN \\
+    \cmd{motor\_test} & gira un motor, desarmado & ACTUATOR\_TEST \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+  \begin{idea}
+    \small Sin heartbeat ni setpoints: el nodo manda \textbf{una orden} y espera a que PX4 la cumpla
+    (mirando el modo, la posición o el ack). Si el nodo se cae, PX4 sigue en su modo.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{El patrón: mandar, esperar, mandar}
+  \centering
+  \begin{tikzpicture}[node distance=0.35cm,every node/.style={font=\tiny},
+      st/.style={draw=azul,fill=azulclaro,rounded corners,minimum width=1.9cm,minimum height=0.55cm,align=center}]
+    \node[st] (g) {WAIT\_GPS};
+    \node[st,right=of g] (a) {ARMING};
+    \node[st,right=of a] (t) {TAKEOFF};
+    \node[st,right=of t,fill=yellow!20] (m) {la acción\\(GOTO, ORBIT\ldots)};
+    \node[st,right=of m] (r) {RETURN};
+    \node[st,right=of r] (d) {DONE};
+    \draw[-{Stealth}] (g) -- node[above]{GPS ok} (a);
+    \draw[-{Stealth}] (a) -- node[above]{armó} (t);
+    \draw[-{Stealth}] (t) -- node[above,align=center]{Hold y\\a la altura} (m);
+    \draw[-{Stealth}] (m) -- node[above]{terminó} (r);
+    \draw[-{Stealth}] (r) -- node[above]{desarmó} (d);
+  \end{tikzpicture}
+  \vspace{0.6em}
+  \begin{itemize}\small
+    \item Cada estado manda su comando \textbf{una vez} al entrar y luego \textbf{solo mira}.
+    \item ``Terminó'' se mide: el modo cambió a Hold, la distancia al punto es pequeña, desarmó\ldots
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{send\_command con los 7 parámetros}
+  \begin{lstlisting}[style=cpp,caption={goto\_mission.cpp: param5 y param6 son double}]
+void send_command(uint32_t command, float p1 = 0.0f, float p2 = 0.0f, float p3 = 0.0f,
+  float p4 = 0.0f, double p5 = 0.0, double p6 = 0.0, float p7 = 0.0f)
+{
+  VehicleCommand msg{};
+  msg.command = command;
+  msg.param1 = p1;  msg.param2 = p2;  msg.param3 = p3;  msg.param4 = p4;
+  msg.param5 = p5;  msg.param6 = p6;  msg.param7 = p7;
+  ...
+  command_pub_->publish(msg);
+}
+  \end{lstlisting}
+  \small En MAVLink, param5 y param6 suelen ser latitud y longitud: en \cmd{float} se perdería
+  \textasciitilde1 m. Por eso en \cmd{VehicleCommand} son \cmd{float64}.
+\end{frame}
+
+\begin{frame}[fragile]{Leer el ack: ¿por qué no me hizo caso?}
+  \begin{lstlisting}[style=cpp,caption={goto\_mission.cpp}]
+ack_sub_ = create_subscription<VehicleCommandAck>(
+  "/fmu/out/vehicle_command_ack", qos,
+  [this](const VehicleCommandAck::SharedPtr msg) {
+    // Solo avisa de rechazos, y una vez por cada respuesta distinta.
+    const bool repeated = msg->command == last_ack_.command && msg->result == last_ack_.result;
+    last_ack_ = *msg;
+    if (!repeated && msg->result != VehicleCommandAck::VEHICLE_CMD_RESULT_ACCEPTED) {
+      RCLCPP_WARN(get_logger(), "PX4 rechazó el comando %u (result=%u)",
+                  msg->command, msg->result);
+    }
+  });
+  \end{lstlisting}
+  \small Sin esto, un comando rechazado se ve igual que uno que ``no hizo nada''. Con esto, la terminal
+  dice cuál y por qué (con la tabla de \cmd{result}).
+\end{frame}
+
+\begin{frame}[fragile]{Armar en modo Hold, y reintentar}
+  \begin{lstlisting}[style=cpp,caption={goto\_mission.cpp, estado ARMING}]
+if (!armed) {
+  if (every_second()) {
+    // Primero a Hold (AUTO_LOITER): en algunos modos, como Land (el modo
+    // en que queda tras aterrizar), PX4 no deja armar.
+    // DO_SET_MODE: param1 = 1 (modo custom), param2 = 4 (AUTO), param3 = 3 (LOITER).
+    if (status_.nav_state != VehicleStatus::NAVIGATION_STATE_AUTO_LOITER) {
+      send_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1.0f, 4.0f, 3.0f);
+    } else {
+      send_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0f);
+    }
+  }
+  break;
+}
+  \end{lstlisting}
+  \small \cmd{every\_second()} manda como mucho un comando por segundo: si PX4 todavía no está listo, se
+  reintenta sin inundarlo.
+\end{frame}
+
+\begin{frame}[fragile]{NAV\_TAKEOFF: la altitud es AMSL}
+  \begin{lstlisting}[style=cpp,caption={goto\_mission.cpp}]
+// Al tener GPS, guardar el punto de despegue en las dos coordenadas:
+home_lat_ = global_.lat;  home_lon_ = global_.lon;  home_alt_ = global_.alt;
+
+send_command(VehicleCommand::VEHICLE_CMD_NAV_TAKEOFF, kNaN, kNaN, kNaN, kNaN,
+             home_lat_, home_lon_, home_alt_ + altitude_);   // AMSL = suelo + altura
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    \begin{itemize}
+      \item Los comandos usan altitud sobre el \textbf{nivel del mar} (AMSL), no sobre el suelo.
+      \item \cmd{global\_.alt} con el dron en el suelo = la altitud del suelo.
+      \item Los params que no aplican van en NaN.
+    \end{itemize}
+    \column{0.42\textwidth}\centering
+    \begin{tikzpicture}[scale=0.7]
+      \fill[gray!25] (-1.8,0) rectangle (1.8,0.3);
+      \draw[dashed] (-1.8,-1.2) -- (1.8,-1.2) node[right,font=\tiny] {mar (0)};
+      \draw[-{Stealth}] (-1.2,-1.2) -- (-1.2,0.3) node[midway,left,font=\tiny] {alt suelo};
+      \draw[-{Stealth},azul] (0.6,0.3) -- (0.6,2.0) node[midway,right,font=\tiny] {altitude\_};
+      \fill[azul] (0.6,2.0) circle (2pt);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- goto
+\begin{frame}{goto\_mission: el cuadrado por GPS}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Los mismos waypoints que \cmd{square\_mission}, en metros \{norte, este\}, convertidos a lat/lon:
+    \[
+      \text{lat} = \text{lat}_0 + \frac{N}{R}\cdot\frac{180}{\pi}
+      \quad
+      \text{lon} = \text{lon}_0 + \frac{E}{R\cos(\text{lat}_0)}\cdot\frac{180}{\pi}
+    \]
+    $R = 6\,371\,000$ m. Los meridianos se juntan hacia los polos: de ahí el $\cos$.
+    \column{0.47\textwidth}\small
+    Y para ir: \cmd{DO\_REPOSITION}
+    \begin{itemize}
+      \item p1 = velocidad (m/s; $-1$ = la de PX4)
+      \item p2 = 1 (obligatorio: ``cambia a Hold'')
+      \item p4 = yaw (NaN = no girar)
+      \item p5, p6, p7 = lat, lon, alt AMSL
+    \end{itemize}
+    PX4 vuela con su propia aceleración y frenado, y \textbf{se queda en Hold} al llegar.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Offboard contra comandos: el mismo cuadrado}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    & \cmd{square\_mission} (offboard) & \cmd{goto\_mission} (comandos) \\
+    \midrule
+    Coordenadas & NED local (m) & GPS (lat, lon, alt AMSL) \\
+    Qué se publica & setpoint a 10 Hz & un comando por waypoint \\
+    Velocidad & la decide PX4 hacia el setpoint & parámetro \cmd{speed} del comando \\
+    Si el nodo se cae & failsafe & se queda en Hold \\
+    Cómo termina & \cmd{NAV\_LAND} & \cmd{NAV\_RETURN\_TO\_LAUNCH} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+% ----------------------------------------------------------------------------- orbit
+\begin{frame}[fragile]{orbit\_command: el modo Orbit de PX4}
+  \begin{lstlisting}[style=cpp,caption={orbit\_command.cpp}]
+// DO_ORBIT: param1 = radio, param2 = velocidad, param3 = hacia dónde mira
+// (0 = al centro), param5/6 = centro (lat/lon), param7 = altitud (NaN = la actual).
+send_command(VehicleCommand::VEHICLE_CMD_DO_ORBIT,
+             static_cast<float>(radius_), static_cast<float>(speed_),
+             VehicleCommand::ORBIT_YAW_BEHAVIOUR_HOLD_FRONT_TO_CIRCLE_CENTER, kNaN,
+             center_lat, global_.lon, kNaN);
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    Comparen con \cmd{orbit\_mission}: allá calculábamos cada punto del círculo; aquí \textbf{una línea}.
+    \begin{itemize}
+      \item Menos control fino (no podemos cambiar la forma).
+      \item El nodo cuenta vueltas con el tiempo ($2\pi r / v$ por vuelta) y luego manda Return.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{terminal}{flight\_mode\_monitor}
+Modo: Hold -> Takeoff\\
+Modo: Takeoff -> Hold\\
+Modo: Hold -> Orbit\\
+Modo: Orbit -> Return\\
+Modo: Return -> Land
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- return
+\begin{frame}{return\_home: las fases de Return}
+  \begin{columns}[c]
+    \column{0.47\textwidth}\centering
+    \begin{tikzpicture}[scale=0.6]
+      \fill[gray!25] (-0.5,-0.2) rectangle (7,0);
+      \fill[verde] (0,0) circle (3pt) node[below,font=\tiny] {casa};
+      \draw[azul,thick,-{Stealth}] (6,1) -- (6,3);
+      \draw[azul,thick,-{Stealth}] (6,3) -- (0.3,3);
+      \draw[azul,thick,-{Stealth}] (0,3) -- (0,1.2);
+      \draw[azul,thick,dashed,-{Stealth}] (0,1.2) -- (0,0.15);
+      \node[font=\tiny,right] at (6,2) {1 sube};
+      \node[font=\tiny,above] at (3,3) {2 vuela a casa};
+      \node[font=\tiny,left] at (0,2) {3 baja};
+      \node[font=\tiny,left] at (0,0.6) {4 aterriza};
+      \fill[naranja] (6,1) circle (3pt) node[below,font=\tiny] {dron};
+    \end{tikzpicture}
+    \column{0.5\textwidth}\small
+    \begin{enumerate}
+      \item Sube a \cmd{RTL\_RETURN\_ALT} si está más bajo (30 m en el x500 de SITL), recortado por un
+        \textbf{cono} sobre casa (\cmd{RTL\_CONE\_ANG}).
+      \item Vuela en línea recta a casa.
+      \item Baja a \cmd{RTL\_DESCEND\_ALT} (10 m) y espera \cmd{RTL\_LAND\_DELAY}.
+      \item Aterriza y desarma solo.
+    \end{enumerate}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{return\_home: deducir la fase}
+  \begin{lstlisting}[style=cpp,caption={return\_home.cpp}]
+const char * phase;
+if (status_.nav_state != VehicleStatus::NAVIGATION_STATE_AUTO_RTL) {
+  phase = "ya no está en Return (¿alguien cambió el modo?)";
+} else if (dist > 2.0 && local_.vz < -0.3) {
+  phase = "subiendo a la altura de retorno";      // vz < 0: subiendo (NED)
+} else if (dist > 2.0) {
+  phase = "volando a casa";
+} else {
+  phase = "sobre casa, bajando";
+}
+  \end{lstlisting}
+  \small PX4 no publica ``en qué fase de Return voy'': se deduce de lo que sí publica (modo, distancia a
+  casa, velocidad vertical).
+\end{frame}
+
+% ----------------------------------------------------------------------------- change speed / set home
+\begin{frame}{change\_speed: DO\_CHANGE\_SPEED}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    \begin{enumerate}
+      \item Despega y va hacia un punto a \cmd{distance} m al norte a \cmd{slow} m/s.
+      \item A un tercio del camino manda \cmd{DO\_CHANGE\_SPEED} a \cmd{fast} m/s.
+      \item Al llegar, Return.
+    \end{enumerate}
+    \begin{center}\scriptsize
+      \begin{tabular}{ll}
+        \toprule
+        p1 & 1 = velocidad sobre el suelo \\
+        p2 & m/s ($-1$ = la de por defecto) \\
+        p3 & acelerador \% ($-1$ = no cambiar) \\
+        \bottomrule
+      \end{tabular}
+    \end{center}
+    \column{0.47\textwidth}
+    \begin{ojo}
+      \small Afecta a los modos automáticos de PX4 (Hold/Go to, Mission). En \textbf{offboard no hace
+      nada}: ahí la velocidad la decide tu setpoint.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{set\_home: mover ``casa''}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    \cmd{DO\_SET\_HOME} tiene dos formas:
+    \begin{itemize}
+      \item p1 = 1: casa = donde está el dron \textbf{ahora}.
+      \item p1 = 0 y p5..p7: casa = esas coordenadas (lat, lon, alt AMSL).
+    \end{itemize}
+    Flujo: arma (PX4 fija casa ahí) $\rightarrow$ despega $\rightarrow$ \cmd{DO\_SET\_HOME} $\rightarrow$
+    espera a que \cmd{home\_position.update\_count} cambie $\rightarrow$ Return $\rightarrow$ aterriza en la
+    casa nueva.
+    \column{0.42\textwidth}
+    \begin{ojo}
+      \small \cmd{home\_position} se publica \textbf{solo cuando cambia}; un nodo que arranca después no
+      recibe el último valor. Por eso \cmd{set\_home} no espera tener casa antes de armar: al armar llega.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- motor test
+\begin{frame}{motor\_test: probar los motores}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Lo mismo que la pestaña ``Motores'' de QGC, desde ROS 2. Sirve para revisar en el dron real:
+    \begin{itemize}
+      \item que cada motor gire,
+      \item que el \textbf{motor 1} sea el que crees (si están cruzados, el dron se voltea al despegar),
+      \item el sentido de giro de cada uno.
+    \end{itemize}
+    \cmd{ACTUATOR\_TEST}: p1 = 0..1, p2 = segundos, p5 = motor (1..8).
+    \column{0.47\textwidth}
+    \begin{ojo}[title={\small\bfseries ¡SIN HÉLICES!}]
+      \small Aunque esté \textbf{desarmado}, el motor \textbf{sí gira}. PX4 solo lo acepta desarmado y con
+      \cmd{COM\_MOT\_TEST\_EN = 1}. El nodo limita el empuje a 30 \%.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{motor\_test: uno o todos}
+  \begin{lstlisting}[style=bash]
+ros2 run px4_examples motor_test                                   # motor 1, 15 %, 2 s
+ros2 run px4_examples motor_test --ros-args -p motor:=3 -p throttle:=0.2 -p seconds:=3.0
+ros2 run px4_examples motor_test --ros-args -p motor:=0            # todos, en orden
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Con \cmd{motor:=0} recorre del 1 al 4 uno por uno. Comparen con el diagrama:
+    \begin{itemize}
+      \item 1 adelante derecha, antihorario
+      \item 2 atrás izquierda, antihorario
+      \item 3 adelante izquierda, horario
+      \item 4 atrás derecha, horario
+    \end{itemize}
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=0.8]
+      \draw[line width=2pt,gray!60] (-1,1) -- (1,-1); \draw[line width=2pt,gray!60] (-1,-1) -- (1,1);
+      \foreach \p/\n/\c in {(1,1)/1/azulclaro,(-1,-1)/2/azulclaro,(-1,1)/3/red!10,(1,-1)/4/red!10} {
+        \draw[fill=\c] \p circle (0.35); \node[font=\scriptsize\bfseries] at \p {\n};}
+      \draw[-{Stealth},verde,thick] (0,0) -- (0,0.8);
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Cuándo offboard y cuándo comandos?}
+  \centering\small
+  \begin{tabular}{p{5.4cm}p{6.2cm}}
+    \toprule
+    Usen \textbf{offboard} cuando\ldots & Usen \textbf{comandos} cuando\ldots \\
+    \midrule
+    la trayectoria es propia (estrella, hélice, un 8) & basta ``ir a un punto'', ``orbitar'', ``regresar'' \\
+    hay que reaccionar a un sensor 10--20 veces por segundo & el nodo puede caerse sin poner en riesgo el vuelo \\
+    se sigue algo que se mueve & se vuela por GPS con los modos probados de PX4 \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+  \begin{idea}
+    \small Se pueden mezclar: despegar con Takeoff, hacer la parte fina en offboard y terminar con Return.
+  \end{idea}
+\end{frame}

@@ -1,0 +1,399 @@
+% =============================================================================
+\section{Offboard: nosotros calculamos}
+% =============================================================================
+
+\begin{frame}{Los cinco ejemplos de offboard}
+  \centering\small
+  \begin{tabular}{llll}
+    \toprule
+    Nodo & Qué vuela & Controla con & Lo nuevo \\
+    \midrule
+    \cmd{takeoff\_mission} & sube a 5 m y se queda & posición & el heartbeat \\
+    \cmd{square\_mission} & cuadrado de 5 m y aterriza & posición & máquina de estados, waypoints \\
+    \cmd{orbit\_mission} & círculo mirando al centro & posición + velocidad & parámetros, feedforward \\
+    \cmd{figure\_eight} & un 8 en función del tiempo & + aceleración & derivadas, yaw de avance \\
+    \cmd{velocity\_control} & tramos de velocidad & velocidad & NaN, marco del cuerpo \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+  \begin{idea}
+    \small Todos publican tres cosas: \cmd{OffboardControlMode} y \cmd{TrajectorySetpoint} \textbf{cada
+    ciclo}, y \cmd{VehicleCommand} \textbf{una vez} para entrar a offboard y armar.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{El grafo de un nodo offboard}
+  \centering
+  \begin{tikzpicture}[node distance=0.4cm,every node/.style={font=\scriptsize},
+      tp/.style={draw=gray,fill=gray!10,rounded corners,minimum width=3.6cm}]
+    \node[draw=azul,fill=yellow!20,rounded corners,minimum height=3cm,minimum width=2.6cm] (n) {takeoff\_mission};
+    \node[tp,left=1.2cm of n,yshift=0.6cm] (s) {/fmu/out/vehicle\_status\_v1};
+    \node[tp,left=1.2cm of n,yshift=-0.6cm] (p) {/fmu/out/vehicle\_local\_position\_v1};
+    \node[tp,right=1.2cm of n,yshift=0.9cm] (o) {/fmu/in/offboard\_control\_mode};
+    \node[tp,right=1.2cm of n] (t) {/fmu/in/trajectory\_setpoint};
+    \node[tp,right=1.2cm of n,yshift=-0.9cm] (c) {/fmu/in/vehicle\_command};
+    \draw[-{Stealth}] (s) -- (n); \draw[-{Stealth}] (p) -- (n);
+    \draw[-{Stealth}] (n) -- node[above,font=\tiny]{10 Hz} (o);
+    \draw[-{Stealth}] (n) -- node[above,font=\tiny]{10 Hz} (t);
+    \draw[-{Stealth}] (n) -- node[below,font=\tiny]{1 vez} (c);
+  \end{tikzpicture}
+\end{frame}
+
+% ----------------------------------------------------------------------------- takeoff
+\begin{frame}[fragile]{takeoff\_mission: el ciclo completo}
+  \begin{lstlisting}[style=cpp,caption={takeoff\_mission.cpp, loop() a 10 Hz}]
+// --- 1) Heartbeat: "sigo vivo y voy a controlar por POSICIÓN"
+OffboardControlMode offboard_msg{};
+offboard_msg.position = true;
+offboard_msg.timestamp = now_us();
+offboard_pub_->publish(offboard_msg);
+
+// --- 2) Setpoint: z = -5 significa 5 m ARRIBA (NED)
+TrajectorySetpoint setpoint_msg{};
+setpoint_msg.position = {0.0f, 0.0f, -5.0f};
+setpoint_msg.yaw = 0.0f;                // rad; 0 = mirando al norte
+setpoint_msg.timestamp = now_us();
+setpoint_pub_->publish(setpoint_msg);
+
+// --- 3) Tras ~1 s de setpoints: pedir OFFBOARD y ARMAR (una sola vez)
+if (counter_ == 10) {
+  send_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1.0f, 6.0f);     // 6 = OFFBOARD
+  send_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0f);  // 1 = armar
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{¿Por qué esperar 1 s antes de pedir offboard?}
+  \centering
+  \begin{tikzpicture}[x=1.05cm]
+    \draw[-{Stealth}] (0,0) -- (11,0) node[right,font=\scriptsize] {ciclos (100 ms)};
+    \foreach \x in {0,...,10} \draw[azul] (\x,0) -- (\x,0.3);
+    \foreach \x in {0,...,10} \node[font=\tiny,below] at (\x,0) {\x};
+    \node[font=\tiny,azul,above] at (5,0.35) {heartbeat + setpoint en cada ciclo};
+    \draw[-{Stealth},thick,naranja] (10,1.2) -- (10,0.4);
+    \node[font=\tiny,naranja,above,align=center] at (10,1.2) {counter\_ == 10:\\OFFBOARD + ARM};
+  \end{tikzpicture}
+  \vspace{0.6em}
+  \begin{itemize}\small
+    \item PX4 \textbf{rechaza} el cambio a offboard si no le están llegando setpoints \textbf{ya}: no sabría qué
+      hacer en el primer instante.
+    \item Por eso: primero \textasciitilde10 ciclos de setpoints, después los comandos.
+    \item Y nunca se deja de publicar: si el nodo se cae (Ctrl+C), PX4 entra en \textbf{failsafe}
+      (\cmd{COM\_OBL\_RC\_ACT}).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{send\_command(): el ayudante de todos}
+  \begin{lstlisting}[style=cpp,caption={Igual en todos los ejemplos}]
+void send_command(uint32_t command, float p1 = 0.0f, float p2 = 0.0f) {
+  VehicleCommand msg{};
+  msg.command = command;
+  msg.param1 = p1;
+  msg.param2 = p2;
+  msg.target_system = 1;       // el dron (MAVLink system id)
+  msg.target_component = 1;   // el autopiloto
+  msg.source_system = 1;
+  msg.source_component = 1;
+  msg.from_external = true;    // viene de fuera de PX4 (de ROS 2)
+  msg.timestamp = now_us();
+  command_pub_->publish(msg);
+}
+  \end{lstlisting}
+  \small \cmd{float p1 = 0.0f}: \textbf{valor por defecto}. \cmd{send\_command(VEHICLE\_CMD\_NAV\_LAND)} lo
+  llama con \cmd{p1 = p2 = 0}.
+\end{frame}
+
+% ----------------------------------------------------------------------------- square
+\begin{frame}[fragile]{square\_mission: waypoints y estados}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+    \begin{lstlisting}[style=cpp]
+enum class State { WARMUP, MISSION,
+                   LANDING, DONE };
+
+std::vector<std::array<float, 3>>
+  waypoints_ = {
+    {0.0f, 0.0f, -5.0f},   // WP0
+    {5.0f, 0.0f, -5.0f},   // WP1
+    {5.0f, 5.0f, -5.0f},   // WP2
+    {0.0f, 5.0f, -5.0f},   // WP3
+    {0.0f, 0.0f, -5.0f}};  // WP4
+    \end{lstlisting}
+    \column{0.47\textwidth}\centering
+    \begin{tikzpicture}[scale=0.55]
+      \draw[-{Stealth},verde] (0,0) -- (0,6.2) node[above,font=\tiny] {x (Norte)};
+      \draw[-{Stealth},rojo] (0,0) -- (6.2,0) node[right,font=\tiny] {y (Este)};
+      \draw[azul,thick,-{Stealth}] (0,0) -- (0,5) -- (5,5) -- (5,0) -- (0,0);
+      \foreach \p/\n in {(0,0)/WP0,(0,5)/WP1,(5,5)/WP2,(5,0)/WP3} \fill[azul] \p circle (3pt) node[above left,font=\tiny] {\n};
+    \end{tikzpicture}
+  \end{columns}
+  \small En MISSION manda el waypoint actual; cuando \cmd{reached()} da \cmd{true}, pasa al siguiente. Al
+  terminar la lista: \cmd{NAV\_LAND}.
+\end{frame}
+
+\begin{frame}[fragile]{square\_mission: ¿ya llegué?}
+  \begin{lstlisting}[style=cpp,caption={square\_mission.cpp}]
+bool reached(const std::array<float, 3> & target) {
+  float dx = position_.x - target[0];
+  float dy = position_.y - target[1];
+  float dz = position_.z - target[2];
+  float distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+  return distance < 0.3f;
+}
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    \begin{itemize}
+      \item Distancia en 3D entre el dron y el waypoint.
+      \item \textbf{0.3 m} de tolerancia: si es muy chica, el dron puede no ``llegar'' nunca por el ruido.
+      \item En \cmd{LANDING} ya no publica setpoints: PX4 está en \cmd{AUTO\_LAND}.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{terminal}{square\_mission}
+Offboard activo, iniciando mision\\
+Llegue al WP 0\\
+Llegue al WP 1\\
+\ldots\\
+Mision completa, aterrizando
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- orbit
+\begin{frame}{orbit\_mission: un círculo calculado por nosotros}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=0.9]
+      \draw[gray] (0,0) circle (1.6);
+      \fill (0,0) circle (2pt) node[below,font=\tiny] {centro};
+      \fill[azul] (50:1.6) circle (3pt);
+      \draw[-{Stealth},thick,naranja] (50:1.6) -- (50:0.5);
+      \draw[-{Stealth},thick,azul] (50:1.6) -- ++(-40:0.9) node[right,font=\tiny] {$v$};
+      \draw[-{Stealth},verde] (0,0) -- (0,2.2) node[above,font=\tiny] {N};
+      \draw (0,0) -- (50:1.6) node[midway,above left,font=\tiny] {$r$};
+      \draw[-{Stealth}] (0,0.6) arc (90:50:0.6);
+      \node[font=\tiny] at (0.45,0.85) {$a$};
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item Ángulo $a$ desde el norte, creciendo hacia el este (horario visto desde arriba).
+      \item Punto: $(c_x + r\cos a,\ c_y + r\sin a)$.
+      \item Cada ciclo: $a \mathrel{+}= \omega\,\Delta t$, con $\omega = v / r$ y $\Delta t = 0.1$ s.
+      \item Velocidad (feedforward): $(-v\sin a,\ v\cos a)$, tangente al círculo.
+      \item Yaw: mirando al centro.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{orbit\_mission: el estado ORBIT}
+  \begin{lstlisting}[style=cpp,caption={orbit\_mission.cpp}]
+case State::ORBIT: {
+  // Las llaves {} crean un bloque: hacen falta para declarar variables
+  // (omega) dentro de un case.
+  const double omega = speed_ / radius_;
+  // Derivada de (r cos a, r sin a): la velocidad es tangente al círculo.
+  vx = -speed_ * std::sin(angle_);
+  vy = speed_ * std::cos(angle_);
+  angle_ += omega * kDt;
+
+  if (angle_ >= 2.0 * M_PI * laps_) {
+    send_command(VehicleCommand::VEHICLE_CMD_NAV_LAND);
+    state_ = State::LANDING;
+  }
+  break;
+}
+  \end{lstlisting}
+  \small \cmd{static constexpr double kDt = 0.1;}: el periodo del timer, como constante con nombre.
+\end{frame}
+
+\begin{frame}{Parámetros de orbit\_mission}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering\small
+    \begin{tabular}{llr}
+      \toprule
+      Parámetro & Qué & Defecto \\
+      \midrule
+      \cmd{center\_x} & m al norte & 0.0 \\
+      \cmd{center\_y} & m al este & 0.0 \\
+      \cmd{altitude} & m & 5.0 \\
+      \cmd{radius} & m & 5.0 \\
+      \cmd{speed} & m/s & 2.0 \\
+      \cmd{laps} & vueltas (entero) & 2 \\
+      \bottomrule
+    \end{tabular}
+    \column{0.47\textwidth}\small
+    Pruébenlo con distintos valores \textbf{sin recompilar}:
+    \begin{itemize}
+      \item \cmd{-p radius:=8.0 -p speed:=3.0}
+      \item \cmd{-p speed:=8.0}: ¿qué pasa con el error de seguimiento?
+      \item \cmd{-p laps:=2.5}: \textbf{error}, \cmd{laps} es entero.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- figure 8
+\begin{frame}{figure\_eight: una curva en función del tiempo}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=0.9]
+      \draw[azul,thick,domain=0:360,samples=120,smooth,variable=\t] plot ({0.75*sin(2*\t)}, {1.6*sin(\t)});
+      \draw[-{Stealth},verde] (0,-1.9) -- (0,2) node[above,font=\tiny] {x (N)};
+      \draw[-{Stealth},rojo] (-1.4,0) -- (1.4,0) node[right,font=\tiny] {y (E)};
+      \fill (0,0) circle (2pt);
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    La lemniscata de Gerono, con $w = 2\pi/T$:
+    \[ x(t) = A\sin(wt) \qquad y(t) = \tfrac{A}{2}\sin(2wt) \]
+    \begin{itemize}
+      \item En $t = 0$ pasa por el origen: empieza donde despegó.
+      \item $T$ (\cmd{period}) = segundos por cada 8; $A$ (\cmd{size}).
+      \item Velocidad máxima $\approx A \cdot 2\pi / T$: con 5 m y 20 s, \textasciitilde1.6 m/s.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Derivar a mano: velocidad y aceleración}
+  \small Con $\frac{d}{dt}\sin(wt) = w\cos(wt)$ y $\frac{d}{dt}\cos(wt) = -w\sin(wt)$:
+  \[
+    \begin{aligned}
+      v_x &= A\,w\cos(wt) & v_y &= A\,w\cos(2wt) \\
+      a_x &= -A\,w^2\sin(wt) & a_y &= -2A\,w^2\sin(2wt)
+    \end{aligned}
+  \]
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \begin{itemize}
+      \item Se mandan \textbf{las tres}: posición, velocidad y aceleración.
+      \item Sin feedforward, PX4 corrige \emph{después} de ver el error: se queda atrás de la curva.
+      \item El nodo imprime el error de seguimiento: compárenlo quitando la velocidad.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{idea}
+      \small \textbf{Yaw de avance}: $\psi = \operatorname{atan2}(v_y, v_x)$. La nariz apunta hacia donde
+      se mueve, como un coche.
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{figure\_eight: struct y método const}
+  \begin{lstlisting}[style=cpp,caption={figure\_eight.cpp}]
+// Posición, velocidad y aceleración de la curva en el instante t.
+struct Sample { float x, y, vx, vy, ax, ay; };
+
+Sample curve(double t) const {          // const: no cambia el objeto
+  const double w = 2.0 * M_PI / period_;
+  const double a = size_;
+  return Sample{
+    static_cast<float>(a * std::sin(w * t)),
+    static_cast<float>(a / 2.0 * std::sin(2.0 * w * t)),
+    ...
+  };
+}
+  \end{lstlisting}
+  \small
+  \begin{itemize}
+    \item \cmd{struct}: agrupar varios valores con nombre (como una clase con todo público).
+    \item \cmd{const} después de los paréntesis: el método \textbf{promete} no modificar miembros.
+    \item 20 Hz (timer de 50 ms): una trayectoria que cambia rápido se sigue mejor con más setpoints.
+  \end{itemize}
+\end{frame}
+
+% ----------------------------------------------------------------------------- velocity
+\begin{frame}{velocity\_control: como un joystick}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Un plan de \textbf{tramos}: ``durante 4 s, 2 m/s al norte'', ``6 s girando a 0.5 rad/s''\ldots
+    \begin{itemize}
+      \item \cmd{OffboardControlMode}: \cmd{velocity = true}, \cmd{position = false}.
+      \item Posición en \textbf{NaN}: ``no controles posición''.
+      \item Yaw en NaN y \cmd{yawspeed} con valor: girar a cierta velocidad.
+    \end{itemize}
+    \column{0.47\textwidth}
+    \begin{ojo}
+      \small En velocidad el dron \textbf{no se queda en un punto}. Si mandas 0 se frena, pero con viento se
+      va moviendo poco a poco: nadie corrige la posición.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{velocity\_control: el plan}
+  \begin{lstlisting}[style=cpp,caption={velocity\_control.cpp: cambia, quita o agrega tramos}]
+//   nombre                        fwd   right down  yawspeed  s    cuerpo
+std::vector<Leg> legs_ = {
+  {"norte a 2 m/s",                2.0f, 0.0f, 0.0f, 0.0f,    4.0, false},
+  {"este a 2 m/s",                 0.0f, 2.0f, 0.0f, 0.0f,    4.0, false},
+  {"girar en el lugar",            0.0f, 0.0f, 0.0f, 0.5f,    6.0, false},
+  {"adelante (hacia donde mira)",  2.0f, 0.0f, 0.0f, 0.0f,    4.0, true},
+  {"adelante girando (curva)",     2.0f, 0.0f, 0.0f, 0.4f,    6.0, true},
+  {"bajar a 0.5 m/s",              0.0f, 0.0f, 0.5f, 0.0f,    3.0, false},
+  {"frenar",                       0.0f, 0.0f, 0.0f, 0.0f,    2.0, false},
+};
+  \end{lstlisting}
+  \small Un \cmd{std::vector} de \cmd{struct Leg}, inicializado con llaves. \cmd{cuerpo = true}: las
+  velocidades son ``adelante / derecha'' del dron, no norte / este.
+\end{frame}
+
+\begin{frame}[fragile]{Del cuerpo a NED}
+  \begin{lstlisting}[style=cpp,caption={velocity\_control.cpp}]
+// Rotar (adelante, derecha) por el heading (yaw) del dron:
+//   norte = adelante*cos(yaw) - derecha*sin(yaw)
+//   este  = adelante*sin(yaw) + derecha*cos(yaw)
+const float yaw = position_.heading;
+vx = leg.forward * std::cos(yaw) - leg.right * std::sin(yaw);
+vy = leg.forward * std::sin(yaw) + leg.right * std::cos(yaw);
+
+setpoint_msg.position = {kNaN, kNaN, kNaN};   // si fuera {0,0,0}, ¡volvería al origen!
+setpoint_msg.velocity = {vx, vy, leg.down};
+setpoint_msg.yaw = kNaN;
+setpoint_msg.yawspeed = leg.yawspeed;
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering
+    \begin{tikzpicture}[scale=0.8]
+      \draw[-{Stealth},verde] (0,0) -- (0,1.8) node[above,font=\tiny] {N};
+      \draw[-{Stealth},rojo] (0,0) -- (1.8,0) node[right,font=\tiny] {E};
+      \draw[-{Stealth},thick,azul] (0,0) -- (40:1.6) node[above right,font=\tiny] {adelante};
+      \draw[-{Stealth},thick,naranja] (0,0) -- (-50:1.2) node[right,font=\tiny] {derecha};
+      \draw[-{Stealth}] (0,0.7) arc (90:40:0.7); \node[font=\tiny] at (0.4,0.95) {yaw};
+    \end{tikzpicture}
+    \column{0.47\textwidth}\small
+    Es lo que se usa para \textbf{seguir algo con la cámara}: ``avanza hacia donde miras''.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{El despegue se cierra con la altura, no con el tiempo}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    Tentación: ``sube 5 s a 1 m/s'' = 5 m. En la práctica \textbf{no}:
+    \begin{itemize}
+      \item PX4 tarda en arrancar motores y hace una rampa de despegue.
+      \item Con el tiempo como criterio, el dron se queda casi en el suelo cuando empieza el siguiente tramo.
+    \end{itemize}
+    \cmd{velocity\_control} sube a 1 m/s \textbf{hasta medir} la altura objetivo; luego empiezan los tramos.
+    \column{0.42\textwidth}
+    \begin{idea}
+      \small Regla general: las transiciones de una misión se disparan con \textbf{lo que se mide} (posición,
+      altura, modo), no con lo que \emph{debería} haber pasado.
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Seguridad en offboard: soltar el control}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    Todos los ejemplos de offboard revisan en cada ciclo:
+    \begin{center}
+      \cmd{state\_ != WARMUP \&\& !in\_offboard()} $\Rightarrow$ abortar
+    \end{center}
+    \begin{itemize}
+      \item Si el piloto cambia de modo desde QGC o el control remoto, o hay un failsafe, el nodo
+        \textbf{deja de mandar} y termina.
+      \item Así el nodo nunca ``pelea'' contra el piloto.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{terminal}{orbit\_mission}
+Fuera de OFFBOARD (nav=4):\\
+\ \ misión abortada
+    \end{terminal}
+  \end{columns}
+\end{frame}

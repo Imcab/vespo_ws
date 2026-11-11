@@ -1,0 +1,292 @@
+% =============================================================================
+\section{Ejemplos de solo lectura}
+% =============================================================================
+
+\begin{frame}{Cinco nodos que solo escuchan}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    Nodo & Lee & Para qué \\
+    \midrule
+    \cmd{telemetry\_listener} & estado, posición, GPS, actitud, batería & un resumen cada segundo \\
+    \cmd{imu\_listener} & \cmd{sensor\_combined} & giroscopio y acelerómetro \\
+    \cmd{gps\_status} & \cmd{vehicle\_gps\_position} & ¿ya se puede volar con GPS? \\
+    \cmd{flight\_mode\_monitor} & \cmd{vehicle\_status\_v1}, \cmd{failsafe\_flags} & cada cambio de modo y failsafe \\
+    \cmd{battery\_monitor} & \cmd{battery\_status\_v1} & avisar bajo un \% (y opcional RTL/LAND) \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+  \begin{idea}
+    \small No mandan nada a PX4 (salvo \cmd{battery\_monitor} si se lo piden): se pueden dejar corriendo
+    \textbf{mientras} otro nodo vuela, para ver qué está pasando.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{El patrón: recibir en callbacks, imprimir en el timer}
+  \centering
+  \begin{tikzpicture}[node distance=0.35cm,every node/.style={font=\scriptsize},
+      tp/.style={draw=gray,fill=gray!10,rounded corners,minimum width=3.2cm},
+      mb/.style={draw=azul,fill=azulclaro,rounded corners,minimum width=1.8cm}]
+    \node[tp] (t1) {vehicle\_status\_v1 (\textasciitilde5 Hz)};
+    \node[tp,below=of t1] (t2) {vehicle\_local\_position (\textasciitilde50 Hz)};
+    \node[tp,below=of t2] (t3) {vehicle\_attitude (\textasciitilde100 Hz)};
+    \node[tp,below=of t3] (t4) {battery\_status\_v1 (1 Hz)};
+    \node[mb,right=1.2cm of t1] (m1) {status\_};
+    \node[mb,right=1.2cm of t2] (m2) {local\_};
+    \node[mb,right=1.2cm of t3] (m3) {attitude\_};
+    \node[mb,right=1.2cm of t4] (m4) {battery\_};
+    \foreach \i in {1,2,3,4} \draw[-{Stealth}] (t\i) -- node[above,font=\tiny]{\cmd{= *msg}} (m\i);
+    \node[draw=azul,fill=yellow!20,rounded corners,minimum height=2.6cm,right=1.2cm of m2,yshift=-0.45cm,align=center] (tm) {timer 1 s\\print\_summary()};
+    \foreach \i in {1,2,3,4} \draw[-{Stealth},dashed] (m\i.east) -- (tm.west);
+  \end{tikzpicture}
+  \vspace{0.4em}
+
+  \raggedright\small Cada topic llega a su ritmo; los callbacks solo guardan \textbf{la última copia}. El timer
+  lee esas copias y escribe una sola línea por segundo, sin llenar la terminal.
+\end{frame}
+
+% ----------------------------------------------------------------------------- telemetry
+\begin{frame}{telemetry\_listener}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Se suscribe a 5 topics y cada segundo imprime:
+    \begin{itemize}
+      \item \textbf{Estado}: armado o no, y el modo (nombre y número).
+      \item \textbf{Local}: x, y, altura ($-z$) y velocidad NED.
+      \item \textbf{GPS}: lat, lon, alt (AMSL).
+      \item \textbf{Actitud}: roll, pitch, yaw en grados (del cuaternión).
+      \item \textbf{Batería}: voltaje y \%.
+    \end{itemize}
+    \column{0.47\textwidth}
+    \begin{terminal}{ros2 run px4\_examples telemetry\_listener}
+Estado: desarmado | modo: HOLD (4)\\
+Local: x=0.01 y=-0.02 alt=0.03 m\\
+\ \ | vel=(0.00, 0.00, 0.00) m/s\\
+GPS: lat=47.3979711 lon=8.5461637\\
+\ \ alt=0.1 m (AMSL)\\
+Actitud: roll=0.1° pitch=-0.2° yaw=90.0°\\
+Batería: 16.20 V | 100 \%
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{telemetry\_listener: ¿llegaron datos?}
+  \begin{lstlisting}[style=cpp,caption={telemetry\_listener.cpp}]
+void print_summary() {
+  // Si timestamp sigue en 0 es que todavía no ha llegado ningún mensaje
+  // (los mensajes se crean con todos sus campos en 0). Suele indicar que
+  // PX4 o el agente no están corriendo, o que el nombre del topic está mal.
+  if (status_.timestamp == 0) {
+    RCLCPP_WARN(get_logger(), "Sin datos de vehicle_status todavía (¿corre el agente?)");
+    return;
+  }
+  ...
+  \end{lstlisting}
+  \small
+  \begin{idea}
+    \small Truco útil en cualquier nodo: un miembro con \cmd{timestamp == 0} significa ``nunca llegó un
+    mensaje''. Antes de usar la posición, revisen que ya haya llegado (y que \cmd{xy\_valid} sea \cmd{true}).
+  \end{idea}
+\end{frame}
+
+\begin{frame}[fragile]{telemetry\_listener: de \texttt{nav\_state} a texto}
+  \begin{lstlisting}[style=cpp,caption={Una función que traduce el número a un nombre}]
+const char * nav_state_name(uint8_t s) {
+  switch (s) {
+    case VehicleStatus::NAVIGATION_STATE_AUTO_LOITER: return "HOLD";
+    case VehicleStatus::NAVIGATION_STATE_OFFBOARD:    return "OFFBOARD";
+    case VehicleStatus::NAVIGATION_STATE_AUTO_LAND:   return "LAND";
+    ...
+    default: return "OTRO";   // cualquier otro valor
+  }
+}
+  \end{lstlisting}
+  \small \cmd{const char*} es texto fijo de C: lo que espera \cmd{\%s} en \cmd{RCLCPP\_INFO}. Cada \cmd{case}
+  termina con \cmd{return}, así que no hace falta \cmd{break}.
+\end{frame}
+
+% ----------------------------------------------------------------------------- imu
+\begin{frame}{imu\_listener}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Lee \cmd{/fmu/out/sensor\_combined} (cientos de Hz) y muestra:
+    \begin{itemize}
+      \item \textbf{Gyro}: velocidad de giro en x, y, z (rad/s y °/s).
+      \item \textbf{Accel}: aceleración en x, y, z (m/s$^2$).
+      \item La frecuencia a la que llegan los mensajes.
+    \end{itemize}
+    Prueben girar el dron en Gazebo (o despegarlo con otro nodo) y vean cómo cambian.
+    \column{0.47\textwidth}
+    \begin{terminal}{ros2 run px4\_examples imu\_listener}
+Gyro [rad/s]: x=+0.001 y=-0.002 z=+0.000\\
+\ \ (deg/s: +0.1 -0.1 +0.0)\\
+Accel [m/s²]: x=+0.012 y=-0.008\\
+\ \ z=-9.806 | 250 Hz
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Por qué el acelerómetro marca $-9.81$ quieto?}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=1]
+      \fill[gray!30] (-1.6,-0.15) rectangle (1.6,0);
+      \draw[thick,fill=azulclaro] (-0.6,0) rectangle (0.6,0.4);
+      \draw[-{Stealth},thick,rojo] (0,0.2) -- (0,-1.1) node[below,font=\tiny] {gravedad};
+      \draw[-{Stealth},thick,verde] (0.3,0.4) -- (0.3,1.5) node[above,font=\tiny] {el suelo empuja};
+      \draw[-{Stealth},azul] (-1.1,0.2) -- (-1.1,-0.5) node[below,font=\tiny] {z (FRD)};
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item Un acelerómetro mide la \textbf{fuerza específica}: todo menos la gravedad.
+      \item Quieto en el suelo, lo único que siente es al suelo empujando \textbf{hacia arriba}.
+      \item En FRD $z$ apunta hacia abajo, así que arriba es $z$ \textbf{negativa}: $(0, 0, -9.81)$.
+      \item En caída libre marcaría $(0, 0, 0)$.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+% ----------------------------------------------------------------------------- gps
+\begin{frame}[fragile]{gps\_status}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Lee el GPS \textbf{crudo} y dice si ya se puede volar con él. Revisa:
+    \begin{itemize}
+      \item \cmd{fix\_type} $\geq 3$ (3D),
+      \item \cmd{satellites\_used} $\geq$ \cmd{min\_satellites} (6),
+      \item \cmd{eph} $\leq$ \cmd{max\_eph} (3.0 m).
+    \end{itemize}
+    \begin{lstlisting}[style=bash]
+ros2 run px4_examples gps_status --ros-args \
+  -p min_satellites:=8 -p max_eph:=2.0
+    \end{lstlisting}
+    \column{0.47\textwidth}
+    \begin{terminal}{ros2 run px4\_examples gps\_status}
+3D | 10 sat | eph 0.9 m epv 1.4 m\\
+\ \ | hdop 0.8 | 47.3979711, 8.5461637\\
+\ \ GPS listo para volar
+    \end{terminal}
+    \footnotesize En el dron real, adentro de un edificio verán ``Todavía no:'' seguido de lo que falta.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{GPS crudo contra posición estimada}
+  \centering
+  \begin{tikzpicture}[node distance=0.5cm,every node/.style={font=\scriptsize},
+      bx/.style={draw=azul,fill=azulclaro,rounded corners,minimum height=0.7cm,align=center}]
+    \node[bx,fill=gray!15,draw=gray] (r) {receptor GPS};
+    \node[bx,right=of r] (g) {\cmd{vehicle\_gps\_position}\\(crudo, 5--10 Hz)};
+    \node[bx,right=of g] (e) {EKF2\\+ IMU, baro, mag};
+    \node[bx,right=of e,fill=yellow!20] (o) {\cmd{vehicle\_global\_position}\\(estimado, rápido)};
+    \draw[-{Stealth}] (r) -- (g); \draw[-{Stealth}] (g) -- (e); \draw[-{Stealth}] (e) -- (o);
+    \node[below=0.2cm of g,font=\tiny] {\cmd{gps\_status}};
+    \node[below=0.2cm of o,font=\tiny] {\cmd{telemetry\_listener}};
+  \end{tikzpicture}
+  \vspace{0.6em}
+
+  \raggedright\small Para \textbf{volar} se usa la estimada; para \textbf{diagnosticar} el GPS (satélites,
+  interferencia), la cruda.
+\end{frame}
+
+% ----------------------------------------------------------------------------- modos
+\begin{frame}{flight\_mode\_monitor}
+  \begin{columns}[c]
+    \column{0.48\textwidth}\small
+    Imprime \textbf{solo cuando algo cambia}:
+    \begin{itemize}
+      \item armado / desarmado,
+      \item el modo (y si PX4 está en otro distinto del que pidió el usuario),
+      \item failsafe activo / terminado,
+      \item chequeos de pre-vuelo OK o fallando,
+      \item las banderas de \cmd{failsafe\_flags} activas.
+    \end{itemize}
+    \column{0.5\textwidth}
+    \begin{terminal}{ros2 run px4\_examples flight\_mode\_monitor}
+DESARMADO\\
+Modo: Hold\\
+Chequeos de pre-vuelo: OK, se puede armar\\
+ARMADO\\
+Modo: Hold -> Offboard\\
+Modo: Offboard -> Hold\\
+FAILSAFE ACTIVO (modo Hold)\\
+Banderas de failsafe:\\
+\ \ señal offboard perdida
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{flight\_mode\_monitor: comparar con lo anterior}
+  \begin{lstlisting}[style=cpp,caption={flight\_mode\_monitor.cpp (recortado)}]
+void on_status(const VehicleStatus & s) {
+  if (first_ || s.nav_state != last_.nav_state) {
+    RCLCPP_INFO(get_logger(), "Modo: %s -> %s", mode_name(last_.nav_state),
+                mode_name(s.nav_state));
+    // Si el modo activo no es el que pidió el usuario, PX4 lo cambió solo.
+    if (s.nav_state != s.nav_state_user_intention) { ... }
+  }
+  last_ = s;          // guardar para la próxima comparación
+  first_ = false;
+}
+  \end{lstlisting}
+  \small Guardar el mensaje anterior y comparar es la forma de detectar \textbf{eventos} (cambios) en
+  lugar de imprimir el estado una y otra vez.
+\end{frame}
+
+\begin{frame}{Úsenlo para entender qué hace PX4}
+  \small Dejen \cmd{flight\_mode\_monitor} corriendo en una terminal y en otra:
+  \begin{itemize}
+    \item Corran \cmd{takeoff\_mission} y luego Ctrl+C: verán \textbf{Offboard $\rightarrow$ failsafe}.
+    \item Corran \cmd{orbit\_command}: \textbf{Takeoff $\rightarrow$ Hold $\rightarrow$ Orbit $\rightarrow$
+      Return $\rightarrow$ Land}.
+    \item Cambien de modo desde QGroundControl.
+  \end{itemize}
+  \begin{idea}
+    \small Cuando un nodo ``no hace nada'', casi siempre es porque PX4 está en un modo distinto del que
+    creían. Este monitor lo dice en una línea.
+  \end{idea}
+\end{frame}
+
+% ----------------------------------------------------------------------------- bateria
+\begin{frame}{battery\_monitor}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Lee la batería, avisa bajo \cmd{low\_percent} y, si se le pide, actúa:
+    \begin{center}\scriptsize
+      \begin{tabular}{ll}
+        \toprule
+        \cmd{action} & Qué hace \\
+        \midrule
+        \cmd{none} & solo avisa \\
+        \cmd{rtl} & \cmd{NAV\_RETURN\_TO\_LAUNCH} \\
+        \cmd{land} & \cmd{NAV\_LAND} ahí mismo \\
+        \bottomrule
+      \end{tabular}
+    \end{center}
+    Solo actúa si el dron \textbf{está armado}.
+    \column{0.47\textwidth}
+    \begin{terminal}{battery\_monitor -p low\_percent:=40.0 -p action:=rtl}
+85.0 \% | 15.80 V (3.95 V/celda, 4S)\\
+\ \ | -1.0 A | OK\\
+BATERÍA BAJA: 39.8 \% (umbral 40 \%)\\
+Regresando a casa (RTL)
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{El failsafe de PX4 contra el nuestro}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    PX4 ya tiene failsafe de batería (\cmd{BAT\_LOW\_THR}, \cmd{BAT\_CRIT\_THR}, \cmd{COM\_LOW\_BAT\_ACT}).
+    ¿Para qué otro?
+    \begin{itemize}
+      \item Avisar \textbf{antes}, con un umbral propio de la misión.
+      \item Que la \textbf{misión decida}: cortar, guardar dónde iba, ir a cargar (como la estación de
+        carga del Nivel 3 de los retos).
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{ojo}
+      \small En SITL \cmd{current\_a} es $-1$ (no hay sensor de corriente simulado) y la batería baja del 100 al
+      50 \% en 30 s armado. No usen esos números para estimar el vuelo real.
+    \end{ojo}
+  \end{columns}
+\end{frame}

@@ -1,0 +1,389 @@
+% =============================================================================
+\section{Volar en offboard}
+% =============================================================================
+
+\begin{frame}{La receta de offboard: tres ingredientes}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+      ig/.style={draw=azul,fill=azulclaro,rounded corners,text width=3.4cm,minimum height=2.5cm}]
+    \node[ig] (a) at (0,0) {\textbf{\large 1}\\[0.2em]\textbf{Heartbeat}\\\cmd{offboard\_control\_mode}\\[0.3em]``sigo vivo y voy a\\controlar por posición''\\[0.2em]\color{azul}10 veces por segundo};
+    \node[ig] (b) at (4.2,0) {\textbf{\large 2}\\[0.2em]\textbf{Setpoint}\\\cmd{trajectory\_setpoint}\\[0.3em]``quiero estar en\\$(x, y, z)$ mirando a yaw''\\[0.2em]\color{azul}10 veces por segundo};
+    \node[ig,fill=yellow!25] (c) at (8.4,0) {\textbf{\large 3}\\[0.2em]\textbf{Modo + armar}\\\cmd{vehicle\_command}\\[0.3em]``entra a Offboard''\\``arma los motores''\\[0.2em]\color{azul}una vez, tras 1 s};
+    \node at (11.6,0) {\dronlado{2.2cm}};
+    \node[font=\large] at (2.1,0) {+}; \node[font=\large] at (6.3,0) {+};
+    \draw[-{Stealth},line width=1.5pt] (10.2,0) -- (10.6,0);
+  \end{tikzpicture}
+  \vspace{0.6em}
+
+  \raggedright\small
+  \begin{itemize}
+    \item Sin \textbf{1} y \textbf{2} corriendo \textbf{antes}, PX4 rechaza entrar a Offboard: por eso el nodo ``calienta'' 1 s.
+    \item Si \textbf{1} y \textbf{2} se detienen en pleno vuelo, PX4 pasa a Hold (failsafe).
+    \item Los cinco ejemplos de offboard siguen esta receta; solo cambia \textbf{qué setpoint} mandan.
+  \end{itemize}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}{takeoff\_mission paso a paso}
+  \begin{columns}[c]
+    \column{0.42\textwidth}\centering
+    \begin{tikzpicture}[scale=0.62]
+      \fill[green!35!black!40] (-3,-0.25) rectangle (3,0);
+      \draw[gray!50] (-2.6,0) -- (-2.6,6);
+      \foreach \h in {0,1,...,6} \draw[gray!50] (-2.7,\h) -- (-2.5,\h) node[left,font=\tiny,text=gris] {\h\,m};
+      \draw[dashed,rojo,thick] (-2.4,5) -- (2.8,5) node[above left,font=\tiny,text=rojo] {setpoint: z = $-5$};
+      \only<1-2>{\node[anchor=south] at (0,0) {\dronlado{2.2cm}};}
+      \only<3>{\node[anchor=south] at (0,2.4) {\dronlado{2.2cm}}; \draw[-{Stealth},line width=2pt,verde] (1.8,1.4) -- (1.8,3.6);}
+      \only<4-5>{\node[anchor=south] at (0,4.55) {\dronlado{2.2cm}};}
+      \only<2>{\foreach \x in {-1.25,1.25} \draw[naranja,thick] (\x-0.5,1.42) arc (180:360:0.5 and 0.12);}
+      \only<5>{\node[draw=rojo,fill=red!5,rounded corners,font=\tiny,align=center] at (0,3.2) {se queda quieto\\(Hold)};}
+    \end{tikzpicture}
+    \column{0.55\textwidth}
+    \only<1>{\begin{terminal}{ros2 run px4\_examples takeoff\_mission}
+takeoff\_mission iniciado, calentando setpoints...\\
+arming=1 nav=4 alt=0.00 m
+    \end{terminal}
+    \small\textbf{0 a 1 s, calentar}: cada 100 ms publica el heartbeat y el setpoint \cmd{\{0, 0, -5\}}. El dron
+    todavía está desarmado en tierra.}%
+    \only<2>{\begin{terminal}{takeoff\_mission}
+Comandos OFFBOARD + ARM enviados
+    \end{terminal}
+    \small\textbf{A 1 s} (\cmd{counter\_ == 10}): pide modo Offboard y armar. Los motores arrancan.}%
+    \only<3>{\begin{terminal}{takeoff\_mission}
+arming=2 nav=14 alt=2.47 m
+    \end{terminal}
+    \small\textbf{Sube}: PX4 ya está en Offboard (\cmd{nav=14}) y persigue el setpoint de 5 m. Tu nodo sigue
+    mandando lo mismo; PX4 hace todo el trabajo.}%
+    \only<4>{\begin{terminal}{takeoff\_mission}
+arming=2 nav=14 alt=5.00 m
+    \end{terminal}
+    \small\textbf{Llegó}: se queda a 5 m mientras el nodo siga publicando. Para siempre, si nadie lo para.}%
+    \only<5>{\begin{terminal}{flight\_mode\_monitor}
+Modo: Offboard -> Hold\\
+FAILSAFE ACTIVO (modo Hold)
+    \end{terminal}
+    \small\textbf{Ctrl+C} al nodo: dejan de llegar setpoints, PX4 lo nota y pasa a \textbf{Hold}. No se cae.
+    Para bajarlo: \textbf{Land} en QGC.}%
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{El corazón del nodo: loop() cada 100 ms}
+  \begin{lstlisting}[style=cpp]
+void loop() {
+  OffboardControlMode offboard_msg{};                       // 1) heartbeat
+  offboard_msg.position = true;
+  offboard_msg.timestamp = now_us();
+  offboard_pub_->publish(offboard_msg);
+
+  TrajectorySetpoint setpoint_msg{};                        // 2) setpoint
+  setpoint_msg.position = {0.0f, 0.0f, -5.0f};              //    norte, este, abajo
+  setpoint_msg.yaw = 0.0f;                                  //    mirando al norte
+  setpoint_msg.timestamp = now_us();
+  setpoint_pub_->publish(setpoint_msg);
+
+  if (counter_ == 10) {                                     // 3) a 1 s: modo + armar
+    send_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1.0f, 6.0f);     // 6 = Offboard
+    send_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0f);  // 1 = armar
+  }
+  if (counter_ <= 10) counter_++;
+}
+  \end{lstlisting}
+  \small Los tres ingredientes, en orden. Fíjate en el \cmd{->}: \cmd{offboard\_pub\_} es un \cmd{SharedPtr}.
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}[fragile]{square\_mission: el plan}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=0.62]
+      \draw[gray!25,step=1] (-1.4,-1.4) grid (6.4,6.4);
+      \draw[-{Stealth},verde,thick] (0,-1.4) -- (0,6.6) node[above,font=\tiny] {Norte (x)};
+      \draw[-{Stealth},rojo,thick] (-1.4,0) -- (6.6,0) node[right,font=\tiny] {Este (y)};
+      \draw[azul,line width=1.5pt,-{Stealth}] (0,0) -- (0,5);
+      \draw[azul,line width=1.5pt,-{Stealth}] (0,5) -- (5,5);
+      \draw[azul,line width=1.5pt,-{Stealth}] (5,5) -- (5,0);
+      \draw[azul,line width=1.5pt,-{Stealth}] (5,0) -- (0,0);
+      \foreach \e/\n/\l/\p in {0/0/WP0 y WP4/below left,0/5/WP1/above left,5/5/WP2/above right,5/0/WP3/below right}
+        {\fill[naranja] (\e,\n) circle (4pt); \node[\p,font=\tiny\bfseries] at (\e,\n) {\l};}
+      \node at (0,0) {\dronarriba{0.9cm}};
+    \end{tikzpicture}
+    \column{0.52\textwidth}
+    \begin{lstlisting}[style=cpp,caption={square\_mission.cpp: la lista de waypoints}]
+// {norte, este, abajo}, todos a 5 m de altura
+std::vector<std::array<float, 3>> waypoints_ = {
+  {0.0f, 0.0f, -5.0f},   // WP0: subir
+  {5.0f, 0.0f, -5.0f},   // WP1: 5 m al norte
+  {5.0f, 5.0f, -5.0f},   // WP2: 5 m al este
+  {0.0f, 5.0f, -5.0f},   // WP3: 5 m al sur
+  {0.0f, 0.0f, -5.0f},   // WP4: de regreso
+};
+    \end{lstlisting}
+    \small Un cuadrado de 5 m. El nodo manda un waypoint a la vez y pasa al siguiente cuando llega.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{square\_mission: la máquina de estados}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+      es/.style={draw=azul,fill=azulclaro,rounded corners,minimum width=2.5cm,minimum height=1.2cm}]
+    \node[es] (w) at (0,0) {\textbf{WARMUP}\\calentar, pedir\\Offboard y armar};
+    \node[es,fill=yellow!25] (m) at (4,0) {\textbf{MISSION}\\un waypoint\\a la vez};
+    \node[es] (l) at (8,0) {\textbf{LANDING}\\PX4 aterriza};
+    \node[es,fill=gray!15,draw=gray] (d) at (11.6,0) {\textbf{DONE}};
+    \draw[-{Stealth},thick] (w) -- node[above,font=\tiny]{armado y} node[below,font=\tiny]{en Offboard} (m);
+    \draw[-{Stealth},thick] (m) -- node[above,font=\tiny]{llegó al} node[below,font=\tiny]{último WP} (l);
+    \draw[-{Stealth},thick] (l) -- node[above,font=\tiny]{desarmado} (d);
+    \draw[-{Stealth},thick] (m.north east) to[out=60,in=120,looseness=4] node[above,font=\tiny]{llegó a un WP: \cmd{wp\_index\_++}} (m.north west);
+  \end{tikzpicture}
+  \vspace{0.8em}
+
+  \raggedright\small
+  \begin{itemize}
+    \item El nodo recuerda \textbf{en qué parte va} con \cmd{state\_}. Cada 100 ms, \cmd{loop()} hace lo que toca
+      según el estado (un \cmd{switch}).
+    \item En \textbf{WARMUP} y \textbf{MISSION} publica heartbeat y setpoint. En \textbf{LANDING} ya no: le pidió
+      a PX4 que aterrice (\cmd{NAV\_LAND}) y PX4 lo hace solo.
+    \item Casi todas las misiones (y los retos) tienen esta forma.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{square\_mission cuadro por cuadro}
+  \begin{columns}[c]
+    \column{0.47\textwidth}\centering
+    \begin{tikzpicture}[scale=0.58]
+      \draw[gray!25,step=1] (-1.4,-1.4) grid (6.4,6.4);
+      \draw[-{Stealth},verde,thick] (0,-1.4) -- (0,6.6) node[above,font=\tiny] {N};
+      \draw[-{Stealth},rojo,thick] (-1.4,0) -- (6.6,0) node[right,font=\tiny] {E};
+      % lo ya recorrido
+      \draw[azul,line width=2pt,visible on=<4->] (0,0) -- (0,5);
+      \draw[azul,line width=2pt,visible on=<5->] (0,5) -- (5,5);
+      \draw[azul,line width=2pt,visible on=<6->] (5,5) -- (5,0);
+      \draw[azul,line width=2pt,visible on=<7->] (5,0) -- (0,0);
+      % lo que sigue
+      \draw[azul,dashed,thick,-{Stealth},visible on=<3>] (0,0.6) -- (0,4.5);
+      \draw[azul,dashed,thick,-{Stealth},visible on=<4>] (0.6,5) -- (4.5,5);
+      \draw[azul,dashed,thick,-{Stealth},visible on=<5>] (5,4.4) -- (5,0.5);
+      \draw[azul,dashed,thick,-{Stealth},visible on=<6>] (4.4,0) -- (0.5,0);
+      \foreach \e/\n in {0/0,0/5,5/5,5/0} \fill[naranja] (\e,\n) circle (3.5pt);
+      % el setpoint que se está mandando
+      \only<1-2,6>{\node[circle,draw=rojo,line width=1.5pt,minimum size=0.75cm] at (0,0) {};}
+      \only<3>{\node[circle,draw=rojo,line width=1.5pt,minimum size=0.75cm] at (0,5) {};}
+      \only<4>{\node[circle,draw=rojo,line width=1.5pt,minimum size=0.75cm] at (5,5) {};}
+      \only<5>{\node[circle,draw=rojo,line width=1.5pt,minimum size=0.75cm] at (5,0) {};}
+      % el dron
+      \only<1-3,7-8>{\node at (0,0) {\dronarriba{0.85cm}};}
+      \only<4>{\node at (0,5) {\dronarriba{0.85cm}};}
+      \only<5>{\node at (5,5) {\dronarriba{0.85cm}};}
+      \only<6>{\node at (5,0) {\dronarriba{0.85cm}};}
+      % altura
+      \draw[gray] (8,0) -- (8,6); \node[font=\tiny,text=gris] at (8,6.4) {altura};
+      \foreach \h in {0,5} \draw[gray] (7.85,\h) -- (8.15,\h) node[right,font=\tiny,text=gris] {\h\,m};
+      \only<1,8>{\fill[azul] (8,0) circle (5pt);}
+      \only<3-6>{\fill[azul] (8,5) circle (5pt);}
+      \only<2>{\draw[-{Stealth},line width=2pt,verde] (8,0.2) -- (8,4.8);}
+      \only<7>{\draw[-{Stealth},line width=2pt,naranja] (8,4.8) -- (8,0.2);}
+    \end{tikzpicture}
+    \column{0.52\textwidth}
+    \begin{tikzpicture}[every node/.style={font=\tiny\bfseries,rounded corners,minimum width=1.5cm,minimum height=0.5cm}]
+      \node[draw=azul,alt=<1>{fill=yellow!60}{fill=azulclaro}] at (0,0) {WARMUP};
+      \node[draw=azul,alt=<2-6>{fill=yellow!60}{fill=azulclaro}] at (1.75,0) {MISSION};
+      \node[draw=azul,alt=<7>{fill=yellow!60}{fill=azulclaro}] at (3.5,0) {LANDING};
+      \node[draw=azul,alt=<8>{fill=yellow!60}{fill=azulclaro}] at (5.25,0) {DONE};
+    \end{tikzpicture}
+    \vspace{0.3em}
+
+    \scriptsize\textbf{Publica:}
+    \only<1-2>{\cmd{position = \{0, 0, -5\}}}%
+    \only<3>{\cmd{position = \{5, 0, -5\}}}%
+    \only<4>{\cmd{position = \{5, 5, -5\}}}%
+    \only<5>{\cmd{position = \{0, 5, -5\}}}%
+    \only<6>{\cmd{position = \{0, 0, -5\}}}%
+    \only<7-8>{nada: aterriza PX4}
+    \vspace{0.2em}
+
+    \only<1>{\begin{terminal}{square\_mission}
+arming=1 nav=4 alt=0.00 m wp=0
+    \end{terminal}\small En tierra, calentando: el setpoint ya es WP0 (5 m arriba del despegue).}%
+    \only<2>{\begin{terminal}{square\_mission}
+Offboard activo, iniciando mision\\
+arming=2 nav=14 alt=2.31 m wp=0
+    \end{terminal}\small Armado y en Offboard: pasa a MISSION. Sube rumbo a WP0.}%
+    \only<3>{\begin{terminal}{square\_mission}
+Llegue al WP 0
+    \end{terminal}\small A 5 m: \cmd{reached()} da verdadero, \cmd{wp\_index\_} pasa a 1 y el setpoint cambia a
+      WP1. El dron va al \textbf{norte}.}%
+    \only<4>{\begin{terminal}{square\_mission}
+Llegue al WP 1
+    \end{terminal}\small Ahora al \textbf{este}. Fíjate: la nariz sigue apuntando al norte.}%
+    \only<5>{\begin{terminal}{square\_mission}
+Llegue al WP 2
+    \end{terminal}\small Al \textbf{sur}: vuela de reversa.}%
+    \only<6>{\begin{terminal}{square\_mission}
+Llegue al WP 3
+    \end{terminal}\small Al \textbf{oeste}, de regreso al punto de despegue.}%
+    \only<7>{\begin{terminal}{square\_mission}
+Llegue al WP 4\\
+Mision completa, aterrizando
+    \end{terminal}\small Era el último: manda \cmd{NAV\_LAND} y deja de publicar setpoints. PX4 baja solo
+      (\cmd{nav=18}).}%
+    \only<8>{\begin{terminal}{square\_mission}
+Aterrizado\\
+Aterrizado\\
+\ldots
+    \end{terminal}\small PX4 desarma al tocar tierra: DONE. (¿Por qué imprime ``Aterrizado'' 10 veces por
+      segundo? Es el primer ejercicio.)}%
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{¿Cuándo ``llegó''?}
+  \begin{columns}[c]
+    \column{0.4\textwidth}\centering
+    \begin{tikzpicture}
+      \fill[rojo!8] (0,0) circle (1.4);
+      \draw[rojo,thick,dashed] (0,0) circle (1.4);
+      \fill[naranja] (0,0) circle (3pt) node[below=2pt,font=\tiny] {WP};
+      \draw[|-|,gris] (0,0) -- (1.4,0) node[midway,above,font=\tiny] {0.3 m};
+      \node at (-0.9,1.9) {\dronarriba{0.9cm}};
+      \node[font=\tiny,text=rojo] at (0.6,2.2) {todavía no};
+      \node at (0.5,-0.55) {\dronarriba{0.9cm}};
+      \node[font=\tiny,text=verde] at (1.45,-1.35) {¡llegó!};
+    \end{tikzpicture}
+    \column{0.57\textwidth}
+    \begin{lstlisting}[style=cpp]
+bool reached(const std::array<float, 3> & target) {
+  float dx = position_.x - target[0];
+  float dy = position_.y - target[1];
+  float dz = position_.z - target[2];
+  float distance = std::sqrt(dx*dx + dy*dy + dz*dz);
+  return distance < 0.3f;
+}
+    \end{lstlisting}
+    \small
+    \begin{itemize}
+      \item Distancia en 3D entre donde está y donde quiere estar.
+      \item Una \textbf{esfera} de 0.3 m: el dron nunca queda exacto, así que se pide ``suficientemente
+        cerca''.
+      \item Muy chica: nunca llega. Muy grande: corta las esquinas.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Por qué el dron no gira?}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=0.8]
+      \draw[azul,line width=1.5pt] (0,0) rectangle (5,5);
+      \foreach \e/\n in {0/0,0/5,5/5,5/0,0/2.5,2.5/5,5/2.5,2.5/0} \node at (\e,\n) {\dronarriba{0.8cm}};
+      \node[font=\tiny,azul,align=center] at (2.5,2.5) {\texttt{yaw = 0}\\siempre};
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item \cmd{setpoint.yaw = 0.0f} en todos los setpoints: la nariz \textbf{siempre al norte}.
+      \item Un multicóptero puede ir de lado y de reversa sin problema.
+      \item Para que mire hacia donde va:\\[0.2em]
+        \cmd{yaw = atan2(este, norte)} del tramo que sigue.
+    \end{itemize}
+    \begin{idea}
+      \small Así lo hace \cmd{figure\_eight}. Con una cámara al frente, esto importa: ves lo que viene.
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Pruébalo tú}
+  \begin{lstlisting}[style=bash]
+vespo up --sim                               # terminal 1
+ros2 run px4_examples flight_mode_monitor     # terminal 2: el narrador
+ros2 run px4_examples square_mission          # terminal 3
+  \end{lstlisting}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{idea}[title={\small\bfseries Ejercicios},coltitle=black,colbacktitle=azulclaro]
+      \small
+      \begin{enumerate}
+        \item Que ``Aterrizado'' se imprima \textbf{una sola vez}.
+        \item Un \textbf{triángulo} en vez de cuadrado.
+        \item Un cuadrado de 10 m \textbf{a 8 m} de altura.
+        \item Que la nariz \textbf{mire hacia donde va}.
+      \end{enumerate}
+    \end{idea}
+    \column{0.48\textwidth}
+    \begin{ojo}[title={\small\bfseries Después de cada cambio}]
+      \small \cmd{vespo build px4\_examples} y vuelve a correr el nodo. La simulación puede seguir prendida:
+      si el dron quedó en el aire, \textbf{Land} en QGC antes de correrlo otra vez.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+% -----------------------------------------------------------------------------
+\begin{frame}[fragile]{orbit\_mission: un círculo con parámetros}
+  \begin{columns}[c]
+    \column{0.42\textwidth}\centering
+    \begin{tikzpicture}[scale=0.42]
+      \draw[gray!25,step=1] (-6.4,-6.4) grid (6.4,6.4);
+      \draw[azul,line width=1.5pt] (0,0) circle (5);
+      \foreach \a in {30,120,210,300} \draw[azul,-{Stealth},line width=1.5pt] (90-\a:5) arc (90-\a:90-\a-15:5);
+      \fill[naranja] (0,0) circle (4pt) node[below=2pt,font=\tiny] {centro};
+      \draw[|-|,gris] (0,0) -- (0,5) node[midway,left,font=\tiny] {radius};
+      \foreach \a in {0,90,180,270} \node[rotate=-\a-180] at ({5*sin(\a)},{5*cos(\a)}) {\dronarriba{0.85cm}};
+    \end{tikzpicture}
+    \column{0.55\textwidth}\small
+    \begin{itemize}
+      \item Va de vuelta en vuelta en sentido \textbf{horario}, con la nariz siempre \textbf{al centro}.
+      \item Manda \textbf{posición + velocidad}: dónde estar en el círculo y la velocidad tangente, para que
+        no vaya a tirones de punto en punto.
+      \item Todo se cambia sin compilar, con \textbf{parámetros}:
+    \end{itemize}
+    \begin{lstlisting}[style=bash]
+ros2 run px4_examples orbit_mission --ros-args \
+  -p radius:=8.0 -p speed:=3.0 -p laps:=1
+    \end{lstlisting}
+    \scriptsize Parámetros: \cmd{center\_x}, \cmd{center\_y}, \cmd{altitude}, \cmd{radius}, \cmd{speed},
+    \cmd{laps}.
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{figure\_eight: un 8 mirando hacia adelante}
+  \begin{columns}[c]
+    \column{0.42\textwidth}\centering
+    \begin{tikzpicture}[scale=0.5]
+      \draw[gray!25,step=1] (-3.4,-5.4) grid (3.4,5.4);
+      \draw[azul,line width=1.5pt,domain=0:360,samples=120,smooth] plot ({2.5*sin(2*\x)},{5*sin(\x)});
+      % (este, norte, yaw en grados) a t = 0, 60, 120, 240, 300 grados
+      \foreach \e/\n/\y in {0/0/45,2.165/4.33/-45,-2.165/4.33/-135,2.165/-4.33/-135,-2.165/-4.33/-45}
+        \node[rotate=-\y] at (\e,\n) {\dronarriba{0.8cm}};
+    \end{tikzpicture}
+    \column{0.55\textwidth}\small
+    \begin{itemize}
+      \item La curva es una fórmula del tiempo:\\
+        norte $= A\sin(\omega t)$, \quad este $= \frac{A}{2}\sin(2\omega t)$.
+      \item Además de la posición manda \textbf{velocidad y aceleración} (las derivadas): PX4 sabe hacia dónde
+        va la curva y no se queda atrás.
+      \item El yaw sigue la velocidad: la nariz \textbf{mira hacia adelante}.
+    \end{itemize}
+    \begin{lstlisting}[style=bash]
+ros2 run px4_examples figure_eight --ros-args \
+  -p size:=8.0 -p period:=30.0
+    \end{lstlisting}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Los cinco de offboard}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    Ejemplo & Manda & Lo nuevo \\
+    \midrule
+    \cmd{takeoff\_mission} & posición fija & la receta: heartbeat, setpoint, modo y armar \\
+    \cmd{square\_mission} & una lista de posiciones & máquina de estados, \cmd{reached()} \\
+    \cmd{orbit\_mission} & posición + velocidad & parámetros de ROS 2, yaw al centro \\
+    \cmd{figure\_eight} & posición + velocidad + aceleración & trayectoria como fórmula del tiempo \\
+    \cmd{velocity\_control} & solo velocidad (y giro) & ``adelante / derecha'' del dron a NED \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+
+  \begin{ojo}
+    \small En offboard \textbf{tu nodo es el piloto automático}: si tiene un bug, el dron hace el bug. Antes
+    de probar algo nuevo, ten QGC a la mano para darle \textbf{Hold} o \textbf{Land}.
+  \end{ojo}
+\end{frame}
