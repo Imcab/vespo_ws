@@ -1,0 +1,7 @@
+# Donde `vespo simulate --world zona_bodegas` pone el dron (a menos que se pase --pose).
+# yaw_deg 90 = mirando al norte, así el heading de PX4 arranca en 0.
+# En la H azul junto a la caseta de la entrada.
+x: 0.0
+y: 0.0
+z: 0.3
+yaw_deg: 90

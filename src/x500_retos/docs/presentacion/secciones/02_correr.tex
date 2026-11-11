@@ -1,0 +1,138 @@
+% =============================================================================
+\section{Preparar y correr}
+% =============================================================================
+
+\begin{frame}[fragile]{Compilar el workspace}
+  \begin{lstlisting}[style=bash,caption={Una vez, y cada que cambie algo en src/}]
+cd /data/vespo_ws
+vespo build                 # colcon build de todo el workspace
+source install/setup.bash   # en cada terminal nueva (vespo up lo hace solo)
+  \end{lstlisting}
+  \vspace{0.3em}
+  \small
+  \begin{itemize}
+    \item \cmd{x500\_retos} instala los mundos, los modelos, los nodos, los launch y los mensajes.
+    \item Al hacer \cmd{source}, un \emph{hook} agrega \cmd{share/x500\_retos/models} a
+      \cmd{GZ\_SIM\_RESOURCE\_PATH}: así Gazebo encuentra \cmd{model://house\_1} y compañía.
+    \item Si solo cambiaron su nodo: \cmd{colcon build --packages-select x500\_retos}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Levantar una misión: dos terminales}
+  \begin{lstlisting}[style=bash,caption={Terminal 1: agente + PX4 SITL + Gazebo + QGroundControl}]
+vespo up --sim --world plaza_show
+  \end{lstlisting}
+  \begin{lstlisting}[style=bash,caption={Terminal 2: tu nodo}]
+ros2 run x500_retos estrella_show
+ros2 run x500_retos estrella_show --ros-args -p points:=6 -p radius:=4.0
+  \end{lstlisting}
+  \begin{idea}
+    \cmd{--world} elige el mundo; los de este paquete aparecen junto a los de PX4 en
+    \cmd{vespo simulate --show}. Cada mundo trae un \cmd{spawn.yaml} que dice dónde
+    aparece el dron.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{Mundo y modelo de cada misión}
+  \centering\small
+  \begin{tabular}{llll}
+    \toprule
+    Misión & \cmd{--world} & \cmd{--custom} & Cómo se corre \\
+    \midrule
+    1 & \cmd{plaza\_show} & --- (\cmd{x500}) & \cmd{ros2 run x500\_retos estrella\_show} \\
+    2 & \cmd{puente\_rio} & --- & \cmd{ros2 run x500\_retos inspeccion\_pilar} \\
+    3 & \cmd{barrio\_entrega} & --- & \cmd{ros2 run x500\_retos entrega\_domicilio} \\
+    4 & \cmd{plaza\_concierto} & --- & \cmd{guardian\_geocerca} + \cmd{vuelo\_prueba} \\
+    5 & \cmd{cueva} & \cmd{x500\_lidar\_2d} & \cmd{ros2 launch x500\_retos cueva.launch.py} \\
+    6 & \cmd{zona\_bodegas} & \cmd{x500\_cam\_abajo} & \cmd{ros2 launch x500\_retos caza.launch.py} \\
+    7 & \cmd{base\_carga} & \cmd{x500\_cam\_abajo} & \cmd{ros2 launch x500\_retos estacion.launch.py} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+
+  \footnotesize Ej.: \cmd{vespo up --sim --world cueva --custom x500\_lidar\_2d}
+\end{frame}
+
+\begin{frame}{Los tres modelos}
+  \begin{columns}[t]
+    \column{0.32\textwidth}
+    \begin{idea}[title={\small\bfseries x500},coltitle=black,colbacktitle=azulclaro]
+      \small El de siempre. Misiones 1--4.
+    \end{idea}
+    \column{0.32\textwidth}
+    \begin{idea}[title={\small\bfseries x500\_lidar\_2d},coltitle=black,colbacktitle=azulclaro]
+      \small De PX4: lidar 2D arriba, 1080 rayos en 270°, hasta 30 m, 30 Hz. Misión 5.
+    \end{idea}
+    \column{0.32\textwidth}
+    \begin{idea}[title={\small\bfseries x500\_cam\_abajo},coltitle=black,colbacktitle=azulclaro]
+      \small \textbf{Nuestro}: cámara hacia abajo de 960\,$\times$\,720 a 15 Hz. Misiones 6 y 7.
+    \end{idea}
+  \end{columns}
+  \vspace{0.6em}
+  \begin{ojo}
+    \small No usen \cmd{x500\_mono\_cam\_down} de PX4 para el Nivel 3: su cámara es de
+    1280\,$\times$\,960 a 30 Hz (\textasciitilde110 MB/s). Pasada a ROS, en una laptop de 16 GB nos
+    llenó la RAM y trabó la computadora. Detalles en la sección de los mundos.
+  \end{ojo}
+\end{frame}
+
+\begin{frame}{QGroundControl tiene que estar abierto}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    PX4 trae \cmd{NAV\_DLL\_ACT = 2}: si no hay estación de tierra, \textbf{no deja armar}.
+    \begin{itemize}
+      \item \cmd{vespo up --sim} ya abre QGC: no hay que hacer nada.
+      \item Si corres \cmd{vespo simulate} solo, abre QGC con \cmd{vespo qgc}.
+      \item Los nodos de offboard reintentan armar cada segundo: en cuanto QGC se conecta, arrancan.
+    \end{itemize}
+    \column{0.42\textwidth}
+    \begin{terminal}{consola de PX4 (pxh>)}
+WARN Preflight Fail:\\
+\ \ No connection to the GCS\\
+WARN Arming denied: Resolve\\
+\ \ system health failures first
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Parámetros sin recompilar}
+  \small Todo lo que es un número de la misión se declara como parámetro de ROS 2:
+  \begin{lstlisting}[style=cpp,caption={Así se declaran (estrella\_show)}]
+points_ = declare_parameter("points", 5);              // picos de la estrella
+radius_ = declare_parameter("radius", 5.0);            // m, del centro a un pico
+altitude_ = declare_parameter("altitude", 6.0);        // m sobre el despegue
+  \end{lstlisting}
+  \begin{lstlisting}[style=bash,caption={Y así se cambian}]
+ros2 run x500_retos estrella_show --ros-args -p points:=4 -p inner_ratio:=0.0
+ros2 param list /estrella_show          # con el nodo corriendo
+  \end{lstlisting}
+  \footnotesize El tipo sale del valor por defecto: \cmd{5} es entero, \cmd{5.0} es double.
+  Pasar \cmd{points:=4.0} a un entero da error.
+\end{frame}
+
+\begin{frame}[fragile]{Ver qué está pasando}
+  \begin{lstlisting}[style=bash,caption={Herramientas que conviene tener a la mano}]
+ros2 topic list | grep fmu                     # lo que publica PX4
+ros2 topic echo /fmu/out/vehicle_local_position_v1 --field z
+ros2 topic hz /x500/scan                       # ¿llega el lidar?
+ros2 run rqt_image_view rqt_image_view /x500/aruco/debug   # lo que ve el detector
+gz topic -l | grep imager                      # topics de Gazebo (no de ROS)
+vespo simulate --show                          # modelos y mundos disponibles
+  \end{lstlisting}
+  \begin{idea}
+    \small ROS 2 y Gazebo tienen topics \textbf{distintos}. El lidar y la cámara publican en
+    Gazebo; el \emph{launch} de cada misión levanta \cmd{ros\_gz\_bridge} para pasarlos a ROS.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{La computadora}
+  \begin{itemize}
+    \item \textbf{Con cargador}: Gazebo + PX4 + la GPU piden más de lo que da la batería
+      de una laptop gamer en picos; sin cargador se nos apagó de golpe varias veces.
+    \item \textbf{RAM}: una sesión normal usa \textasciitilde1--2 GB. Si Gazebo crece sin parar
+      (\cmd{top}, columna RES de \cmd{ruby}), algo está acumulando imágenes: ciérrenlo.
+    \item \textbf{Tiempo real}: el factor (RTF) de Gazebo debe estar cerca de 1.0
+      (\cmd{gz topic -e -t /world/<mundo>/stats -n 1}). Todos los mundos corren a 1.0
+      en una RTX 4060 laptop.
+  \end{itemize}
+\end{frame}

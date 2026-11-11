@@ -1,0 +1,7 @@
+# Donde `vespo simulate --world puente_rio` pone el dron (a menos que se pase --pose).
+# yaw_deg 90 = mirando al norte, así el heading de PX4 arranca en 0.
+# En la orilla oeste, 4 m al sur del puente.
+x: 0.0
+y: 0.0
+z: 0.3
+yaw_deg: 90

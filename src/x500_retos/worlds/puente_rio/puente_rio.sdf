@@ -1,0 +1,194 @@
+<?xml version="1.0" ?>
+<!-- Río con un puente de concreto (misión 2: inspeccionar un pilar).
+     El pilar con bandas de colores está en Gazebo (6.5, 8.0), o sea
+     NED norte 8.0 m, este 6.5 m desde donde despega el dron. Mide 0.8 m
+     de radio y las bandas están a 1, 2, 3 y 4 m sobre la orilla.
+
+     Generado por tools/build_worlds.py: los cambios a mano se pierden al
+     regenerar. Se corre con  vespo up --sim --world puente_rio
+-->
+<sdf version="1.9">
+  <world name="puente_rio">
+
+
+    <!-- Sin <plugin> a propósito: si el mundo declara alguno, Gazebo ignora el
+         server.config de PX4 (física, IMU, barómetro, GPS, cámaras). -->
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type="adiabatic"/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>47.397971057728974</latitude_deg>
+      <longitude_deg>8.546163739800146</longitude_deg>
+      <elevation>0</elevation>
+    </spherical_coordinates>
+
+    <scene><ambient>0.5 0.5 0.55 1</ambient><background>0.62 0.75 0.92 1</background><sky></sky><shadows>true</shadows><grid>false</grid></scene>
+
+<light type="directional" name="sol"><cast_shadows>true</cast_shadows><pose>0.000 0.000 60.000 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.96 0.88 1</diffuse><specular>0.25 0.25 0.25 1</specular><intensity>1.0</intensity><direction>-0.45 0.5 -0.75</direction></light>
+<model name="escena"><static>true</static>
+<link name="valle"><collision name="c_1"><pose>-134.000 0.000 7.500 0.0000 -0.0000 0.0000</pose><geometry><box><size>232.400 500.000 1.000</size></box></geometry></collision>
+<collision name="c_2"><pose>-13.832 0.000 3.626 0.0000 0.7266 0.0000</pose><geometry><box><size>12.442 500.000 1.000</size></box></geometry></collision>
+<collision name="c_3"><pose>-3.500 0.000 -0.500 0.0000 -0.0000 0.0000</pose><geometry><box><size>11.400 500.000 1.000</size></box></geometry></collision>
+<collision name="c_4"><pose>3.146 0.000 -1.854 0.0000 0.7854 0.0000</pose><geometry><box><size>4.643 500.000 1.000</size></box></geometry></collision>
+<collision name="c_5"><pose>14.000 0.000 -3.500 0.0000 -0.0000 0.0000</pose><geometry><box><size>18.400 500.000 1.000</size></box></geometry></collision>
+<collision name="c_6"><pose>24.854 0.000 -1.854 0.0000 -0.7854 0.0000</pose><geometry><box><size>4.643 500.000 1.000</size></box></geometry></collision>
+<collision name="c_7"><pose>29.500 0.000 -0.500 0.0000 -0.0000 0.0000</pose><geometry><box><size>7.400 500.000 1.000</size></box></geometry></collision>
+<collision name="c_8"><pose>37.832 0.000 3.626 0.0000 -0.7266 0.0000</pose><geometry><box><size>12.442 500.000 1.000</size></box></geometry></collision>
+<collision name="c_9"><pose>156.000 0.000 7.500 0.0000 -0.0000 0.0000</pose><geometry><box><size>228.400 500.000 1.000</size></box></geometry></collision>
+<visual name="v_10"><geometry><mesh><uri>model://x500_mallas/puente_rio/terreno_0_pasto.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/pasto/pasto_color.jpg</albedo_map><normal_map>model://x500_texturas/pasto/pasto_normal.jpg</normal_map><roughness_map>model://x500_texturas/pasto/pasto_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_11"><geometry><mesh><uri>model://x500_mallas/puente_rio/terreno_1_tierra_pasto.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/tierra_pasto/tierra_pasto_color.jpg</albedo_map><normal_map>model://x500_texturas/tierra_pasto/tierra_pasto_normal.jpg</normal_map><roughness_map>model://x500_texturas/tierra_pasto/tierra_pasto_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_12"><geometry><mesh><uri>model://x500_mallas/puente_rio/terreno_2_pasto.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/pasto/pasto_color.jpg</albedo_map><normal_map>model://x500_texturas/pasto/pasto_normal.jpg</normal_map><roughness_map>model://x500_texturas/pasto/pasto_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_13"><geometry><mesh><uri>model://x500_mallas/puente_rio/terreno_3_roca.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/roca/roca_color.jpg</albedo_map><normal_map>model://x500_texturas/roca/roca_normal.jpg</normal_map><roughness_map>model://x500_texturas/roca/roca_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_14"><geometry><mesh><uri>model://x500_mallas/puente_rio/terreno_4_lecho_rio.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/lecho_rio/lecho_rio_color.jpg</albedo_map><normal_map>model://x500_texturas/lecho_rio/lecho_rio_normal.jpg</normal_map><roughness_map>model://x500_texturas/lecho_rio/lecho_rio_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_15"><pose>14.000 0.000 -1.000 0.0000 0.0000 0.0000</pose><geometry><box><size>24.000 500.000 0.020</size></box></geometry><material><ambient>0.1 0.3 0.36 1</ambient><diffuse>0.1 0.3 0.36 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.05</roughness><metalness>0.2</metalness></metal></pbr></material><transparency>0.3</transparency><cast_shadows>false</cast_shadows></visual>
+<visual name="v_16"><pose>0.000 0.000 0.030 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>1.350</radius><length>0.020</length></cylinder></geometry><material><ambient>1.0 1.0 1.0 1</ambient><diffuse>1.0 1.0 1.0 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_17"><pose>0.000 0.000 0.035 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>1.200</radius><length>0.020</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.12 0.12 0.14 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_18"><pose>-0.400 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.160 1.100 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_19"><pose>0.400 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.160 1.100 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_20"><pose>0.000 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.800 0.160 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual></link>
+<link name="puente"><visual name="v_1"><geometry><mesh><uri>model://x500_mallas/puente_rio/puente.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/concreto_claro/concreto_claro_color.jpg</albedo_map><normal_map>model://x500_texturas/concreto_claro/concreto_claro_normal.jpg</normal_map><roughness_map>model://x500_texturas/concreto_claro/concreto_claro_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_2"><geometry><mesh><uri>model://x500_mallas/puente_rio/pilas.obj</uri></mesh></geometry><material><ambient>0.85 0.85 0.85 1</ambient><diffuse>0.85 0.85 0.85 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/concreto_claro/concreto_claro_color.jpg</albedo_map><normal_map>model://x500_texturas/concreto_claro/concreto_claro_normal.jpg</normal_map><roughness_map>model://x500_texturas/concreto_claro/concreto_claro_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_3"><geometry><mesh><uri>model://x500_mallas/puente_rio/calle.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/calle/calle_color.jpg</albedo_map><normal_map>model://x500_texturas/calle/calle_normal.jpg</normal_map><roughness_map>model://x500_texturas/calle/calle_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_4"><geometry><mesh><uri>model://x500_mallas/puente_rio/banqueta.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/banqueta/banqueta_color.jpg</albedo_map><normal_map>model://x500_texturas/banqueta/banqueta_normal.jpg</normal_map><roughness_map>model://x500_texturas/banqueta/banqueta_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<collision name="c_5"><pose>12.000 8.000 7.500 0.0000 0.0000 0.0000</pose><geometry><box><size>60.000 8.000 1.000</size></box></geometry></collision>
+<collision name="c_6"><pose>-5.500 8.000 3.200 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.800</radius><length>6.400</length></cylinder></geometry></collision>
+<collision name="c_7"><pose>-5.500 8.000 6.700 0.0000 0.0000 0.0000</pose><geometry><box><size>2.200 7.400 0.600</size></box></geometry></collision>
+<collision name="c_8"><pose>6.500 8.000 1.700 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.800</radius><length>9.400</length></cylinder></geometry></collision>
+<collision name="c_9"><pose>6.500 8.000 6.700 0.0000 0.0000 0.0000</pose><geometry><box><size>2.200 7.400 0.600</size></box></geometry></collision>
+<collision name="c_10"><pose>18.500 8.000 1.700 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.800</radius><length>9.400</length></cylinder></geometry></collision>
+<collision name="c_11"><pose>18.500 8.000 6.700 0.0000 0.0000 0.0000</pose><geometry><box><size>2.200 7.400 0.600</size></box></geometry></collision>
+<collision name="c_12"><pose>30.500 8.000 3.200 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.800</radius><length>6.400</length></cylinder></geometry></collision>
+<collision name="c_13"><pose>30.500 8.000 6.700 0.0000 0.0000 0.0000</pose><geometry><box><size>2.200 7.400 0.600</size></box></geometry></collision>
+<collision name="c_14"><pose>12.000 4.120 8.600 0.0000 0.0000 0.0000</pose><geometry><box><size>60.000 0.250 1.000</size></box></geometry></collision>
+<collision name="c_15"><pose>12.000 11.880 8.600 0.0000 0.0000 0.0000</pose><geometry><box><size>60.000 0.250 1.000</size></box></geometry></collision></link>
+<link name="marcas_inspeccion"><visual name="v_1"><pose>6.500 8.000 1.000 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.815</radius><length>0.080</length></cylinder></geometry><material><ambient>1.0 0.85 0.1 1</ambient><diffuse>1.0 0.85 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.400 0.340 0.040 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_2"><pose>6.500 8.000 2.000 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.815</radius><length>0.080</length></cylinder></geometry><material><ambient>1.0 0.55 0.1 1</ambient><diffuse>1.0 0.55 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.400 0.220 0.040 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_3"><pose>6.500 8.000 3.000 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.815</radius><length>0.080</length></cylinder></geometry><material><ambient>1.0 0.85 0.1 1</ambient><diffuse>1.0 0.85 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.400 0.340 0.040 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_4"><pose>6.500 8.000 4.000 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.815</radius><length>0.080</length></cylinder></geometry><material><ambient>1.0 0.55 0.1 1</ambient><diffuse>1.0 0.55 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.400 0.220 0.040 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_5"><pose>6.140 8.720 1.173 -0.4276 0.0000 2.0347</pose><geometry><box><size>0.030 0.020 0.625</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_6"><pose>5.715 7.820 1.990 0.0074 0.0000 3.3670</pose><geometry><box><size>0.030 0.020 0.329</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_7"><pose>7.283 8.188 2.248 -0.4093 0.0000 0.2356</pose><geometry><box><size>0.030 0.020 0.335</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_8"><pose>5.784 8.368 3.742 -0.2768 0.0000 2.6673</pose><geometry><box><size>0.030 0.020 0.362</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_9"><pose>5.940 7.422 4.201 -0.1033 0.0000 3.9423</pose><geometry><box><size>0.030 0.020 0.589</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_10"><pose>7.296 7.880 0.777 -0.2104 0.0000 6.1340</pose><geometry><box><size>0.030 0.020 0.729</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_11"><pose>6.996 8.634 1.048 0.3161 0.0000 0.9064</pose><geometry><box><size>0.030 0.020 0.454</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_12"><pose>6.839 8.730 2.810 -0.1276 0.0000 1.1355</pose><geometry><box><size>0.030 0.020 0.619</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_13"><pose>5.731 7.762 0.839 -0.2940 0.0000 3.4416</pose><geometry><box><size>0.030 0.020 0.330</size></box></geometry><material><ambient>0.08 0.08 0.08 1</ambient><diffuse>0.08 0.08 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_14"><pose>7.320 8.000 2.500 0.0000 0.0000 0.0000</pose><geometry><box><size>0.020 0.400 0.400</size></box></geometry><material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.200 0.160 0.000 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_15"><pose>7.320 8.000 2.500 0.0000 0.0000 0.0000</pose><geometry><box><size>0.025 0.200 0.200</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_16"><pose>6.500 8.820 2.500 0.0000 0.0000 1.5708</pose><geometry><box><size>0.020 0.400 0.400</size></box></geometry><material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.200 0.160 0.000 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_17"><pose>6.500 8.820 2.500 0.0000 0.0000 1.5708</pose><geometry><box><size>0.025 0.200 0.200</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_18"><pose>5.680 8.000 2.500 0.0000 0.0000 3.1416</pose><geometry><box><size>0.020 0.400 0.400</size></box></geometry><material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.200 0.160 0.000 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_19"><pose>5.680 8.000 2.500 0.0000 0.0000 3.1416</pose><geometry><box><size>0.025 0.200 0.200</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_20"><pose>6.500 7.180 2.500 0.0000 0.0000 4.7124</pose><geometry><box><size>0.020 0.400 0.400</size></box></geometry><material><ambient>1.0 0.8 0.0 1</ambient><diffuse>1.0 0.8 0.0 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.200 0.160 0.000 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+<visual name="v_21"><pose>6.500 7.180 2.500 0.0000 0.0000 4.7124</pose><geometry><box><size>0.025 0.200 0.200</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0.05 0.05 0.05 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material></visual></link>
+</model>
+<include><uri>model://lamp_post</uri><name>poste_0</name><pose>-30.000 4.600 8.140 0.0000 0.0000 3.1416</pose></include>
+<include><uri>model://lamp_post</uri><name>poste_1</name><pose>-12.000 11.400 8.140 0.0000 0.0000 0.0000</pose></include>
+<include><uri>model://lamp_post</uri><name>poste_2</name><pose>6.000 4.600 8.140 0.0000 0.0000 3.1416</pose></include>
+<include><uri>model://lamp_post</uri><name>poste_3</name><pose>24.000 11.400 8.140 0.0000 0.0000 0.0000</pose></include>
+<include><uri>model://lamp_post</uri><name>poste_4</name><pose>42.000 4.600 8.140 0.0000 0.0000 3.1416</pose></include>
+<include><uri>model://lamp_post</uri><name>poste_5</name><pose>60.000 11.400 8.140 0.0000 0.0000 0.0000</pose></include>
+<include><uri>model://hatchback_red</uri><name>coche_1</name><pose>-2.000 6.500 8.020 0.0000 0.0000 0.0000</pose></include>
+<include><uri>model://suv</uri><name>coche_2</name><pose>15.000 9.500 8.020 0.0000 0.0000 3.1416</pose></include>
+<include><uri>model://pickup</uri><name>coche_3</name><pose>34.000 6.500 8.020 0.0000 0.0000 0.0000</pose></include>
+<include><uri>model://truck_delivery</uri><name>camioneta_inspeccion</name><pose>-5.000 -7.000 0.000 0.0000 0.0000 1.5708</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_1</name><pose>24.610 16.627 -1.690 0.0000 0.0000 3.9295</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_2</name><pose>1.677 -77.893 0.023 0.0000 0.0000 5.2593</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_3</name><pose>24.278 -42.507 -2.022 0.0000 0.0000 6.2526</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_4</name><pose>2.770 53.834 -1.070 0.0000 0.0000 2.9915</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_5</name><pose>25.417 -55.901 -0.883 0.0000 0.0000 3.9869</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_7</name><pose>25.724 27.426 -0.576 0.0000 0.0000 0.4021</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_8</name><pose>3.547 14.576 -1.847 0.0000 0.0000 1.8920</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_9</name><pose>23.593 58.484 -2.707 0.0000 0.0000 2.9689</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_10</name><pose>3.441 60.610 -1.741 0.0000 0.0000 4.4847</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_11</name><pose>26.263 -16.806 -0.037 0.0000 0.0000 5.0297</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_12</name><pose>2.700 69.694 -1.000 0.0000 0.0000 5.5193</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_13</name><pose>23.792 -58.245 -2.508 0.0000 0.0000 1.3627</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_11_0</name><pose>-2.701 52.736 0.000 0.0000 0.0000 1.4430</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_11_1</name><pose>-8.059 -35.388 0.000 0.0000 0.0000 0.4412</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_2</name><pose>-2.066 -82.462 0.000 0.0000 0.0000 2.5158</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_3</name><pose>0.822 83.656 0.000 0.0000 0.0000 2.4285</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_4</name><pose>-2.461 20.801 0.000 0.0000 0.0000 5.3238</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_11_5</name><pose>-7.425 -87.300 0.000 0.0000 0.0000 1.3177</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_6</name><pose>-7.098 -46.450 0.000 0.0000 0.0000 2.9530</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_7</name><pose>-4.595 61.637 0.000 0.0000 0.0000 2.4971</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_11_8</name><pose>-4.002 29.241 0.000 0.0000 0.0000 3.9550</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_11_9</name><pose>-0.598 37.406 0.000 0.0000 0.0000 1.6951</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_12_0</name><pose>29.847 28.345 0.000 0.0000 0.0000 5.7493</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_12_1</name><pose>30.998 -64.332 0.000 0.0000 0.0000 0.5716</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_12_2</name><pose>27.065 -22.544 0.000 0.0000 0.0000 5.9484</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_12_3</name><pose>28.644 55.863 0.000 0.0000 0.0000 2.6591</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_12_4</name><pose>31.144 18.262 0.000 0.0000 0.0000 1.9638</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_12_5</name><pose>27.872 -10.790 0.000 0.0000 0.0000 1.0275</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_12_6</name><pose>27.974 73.075 0.000 0.0000 0.0000 0.3227</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_12_7</name><pose>32.054 -86.651 0.000 0.0000 0.0000 5.1252</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_0</name><pose>-64.459 37.052 8.000 0.000 0.000 4.572</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_1</name><pose>-38.955 69.867 8.000 0.000 0.000 1.856</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_2</name><pose>-68.857 -53.888 8.000 0.000 0.000 4.298</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_3</name><pose>-35.959 -73.957 8.000 0.000 0.000 1.417</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_4</name><pose>-48.121 -57.218 8.000 0.000 0.000 4.043</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_5</name><pose>-62.321 -13.684 8.000 0.000 0.000 3.414</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_6</name><pose>-29.741 21.680 8.000 0.000 0.000 2.762</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_7</name><pose>-79.134 -44.833 8.000 0.000 0.000 0.582</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_8</name><pose>-71.197 74.257 8.000 0.000 0.000 6.270</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_9</name><pose>-31.416 61.209 8.000 0.000 0.000 1.894</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_10</name><pose>-30.418 48.950 8.000 0.000 0.000 3.753</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_11</name><pose>-23.041 58.754 8.000 0.000 0.000 2.952</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_12</name><pose>-50.793 51.001 8.000 0.000 0.000 5.243</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_13</name><pose>-46.152 -14.084 8.000 0.000 0.000 2.103</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_14</name><pose>-61.174 -76.528 8.000 0.000 0.000 6.093</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_15</name><pose>-20.859 38.185 8.000 0.000 0.000 2.980</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_13_16</name><pose>-53.396 -64.673 8.000 0.000 0.000 1.863</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_17</name><pose>-67.842 4.539 8.000 0.000 0.000 3.150</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_13_18</name><pose>-68.332 -26.712 8.000 0.000 0.000 4.639</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_19</name><pose>-75.603 30.246 8.000 0.000 0.000 4.298</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_13_20</name><pose>-22.780 -22.062 8.000 0.000 0.000 1.625</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_21</name><pose>-36.867 86.596 8.000 0.000 0.000 2.234</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_22</name><pose>-77.407 -71.651 8.000 0.000 0.000 1.806</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_23</name><pose>-41.657 -68.049 8.000 0.000 0.000 2.204</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_24</name><pose>-55.191 73.648 8.000 0.000 0.000 2.498</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_25</name><pose>-57.515 43.302 8.000 0.000 0.000 4.764</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_26</name><pose>-71.780 94.261 8.000 0.000 0.000 0.026</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_13_27</name><pose>-43.790 44.543 8.000 0.000 0.000 1.196</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_28</name><pose>-67.297 23.448 8.000 0.000 0.000 3.485</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_13_29</name><pose>-45.148 18.245 8.000 0.000 0.000 1.819</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_0</name><pose>51.051 40.517 8.000 0.000 0.000 2.948</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_1</name><pose>87.035 88.070 8.000 0.000 0.000 2.437</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_2</name><pose>61.894 -48.845 8.000 0.000 0.000 1.963</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_3</name><pose>92.448 31.690 8.000 0.000 0.000 3.682</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_4</name><pose>63.997 36.847 8.000 0.000 0.000 5.882</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_5</name><pose>70.180 55.503 8.000 0.000 0.000 1.580</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_6</name><pose>51.814 -55.347 8.000 0.000 0.000 0.919</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_7</name><pose>103.497 -28.393 8.000 0.000 0.000 1.445</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_8</name><pose>61.187 60.856 8.000 0.000 0.000 1.662</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_9</name><pose>85.690 -70.059 8.000 0.000 0.000 3.795</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_10</name><pose>80.388 32.800 8.000 0.000 0.000 1.831</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_11</name><pose>54.887 30.340 8.000 0.000 0.000 2.317</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_12</name><pose>52.120 -32.587 8.000 0.000 0.000 3.744</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_13</name><pose>108.548 -19.265 8.000 0.000 0.000 4.758</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_14</name><pose>84.097 74.519 8.000 0.000 0.000 5.287</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_15</name><pose>89.334 -77.694 8.000 0.000 0.000 2.413</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_16</name><pose>55.959 -81.066 8.000 0.000 0.000 3.430</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_17</name><pose>101.736 2.756 8.000 0.000 0.000 1.976</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_18</name><pose>56.793 -9.480 8.000 0.000 0.000 3.850</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_19</name><pose>77.032 -79.514 8.000 0.000 0.000 5.866</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_20</name><pose>97.996 -82.093 8.000 0.000 0.000 2.133</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_21</name><pose>62.524 -94.401 8.000 0.000 0.000 0.649</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_22</name><pose>79.300 -8.967 8.000 0.000 0.000 4.349</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_23</name><pose>75.318 -52.747 8.000 0.000 0.000 1.626</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_24</name><pose>101.120 87.804 8.000 0.000 0.000 3.422</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_25</name><pose>48.386 -71.341 8.000 0.000 0.000 4.933</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_26</name><pose>90.429 14.289 8.000 0.000 0.000 2.316</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_27</name><pose>66.934 13.880 8.000 0.000 0.000 0.810</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_14_28</name><pose>105.983 -47.292 8.000 0.000 0.000 0.920</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_14_29</name><pose>63.951 -62.258 8.000 0.000 0.000 0.921</pose></include>
+  </world>
+</sdf>

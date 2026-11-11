@@ -1,0 +1,112 @@
+% =============================================================================
+\section{Calificar, depurar y chuleta}
+% =============================================================================
+
+\begin{frame}{Criterio de éxito de cada misión}
+  \centering\scriptsize
+  \begin{tabular}{clp{8.2cm}}
+    \toprule
+    \# & Misión & El nodo imprime ``Misión cumplida'' si\ldots \\
+    \midrule
+    1 & Estrella & pasa a \textless 0.5 m de cada vértice, regresa al centro y aterriza \\
+    2 & Pilar & radio $3 \pm 0.3$ m, yaw \textless 10°, $\geq$ 90\% de las vueltas y llega a 4 m \\
+    3 & Entrega & secuencia completa sin tocar QGC y termina a \textless 1.5 m de la H de la farmacia \\
+    4 & Geocerca & el dron se detiene antes de pasar 1 m la cerca (prueben 2 y 6 m/s, varias direcciones) \\
+    5 & Cueva & cruza, el lidar nunca a \textless 0.6 m de la roca, aterriza a \textless 1 m de la plataforma \\
+    6 & Caza & a la vista $\geq$ 80\% de 60 s y a \textless 1.5 m en promedio \\
+    7 & Estación & cada carga aterriza a \textless 0.3 m del centro del ArUco y termina la patrulla \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{La rúbrica}
+  \centering\small
+  \begin{tabular}{lrp{7cm}}
+    \toprule
+    Criterio & Peso & Qué se revisa \\
+    \midrule
+    Funciona & 40\% & ``Misión cumplida'' en 3 corridas seguidas \\
+    Manejo de fallas & 15\% & Aborta y regresa bien cuando se le provoca una falla \\
+    Código legible & 20\% & Máquina de estados clara, comentarios como en \cmd{px4\_examples} \\
+    Parámetros & 10\% & Se ajusta con \cmd{--ros-args} sin recompilar \\
+    README + video & 15\% & Otra persona lo corre solo con el README \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+  \begin{idea}
+    \small Cada quien presenta su misión en 5 minutos frente al equipo. Explicar la máquina de estados en voz
+    alta es donde se nota si de verdad la entendieron.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{Provocar fallas a propósito}
+  \small El 15\% de ``manejo de fallas'' se prueba así:
+  \begin{itemize}
+    \item \textbf{Matar el nodo} a media misión (Ctrl+C): en offboard PX4 debe entrar en failsafe;
+      con comandos (misión 3) se queda en Hold.
+    \item \textbf{Tomar el control desde QGC} (cambiar a Position o Hold): el nodo debe soltar y avisar
+      ``Fuera de OFFBOARD''.
+    \item \textbf{Geocerca}: escaparse en distintas direcciones y velocidades con \cmd{vuelo\_prueba}.
+    \item \textbf{Cueva}: subir \cmd{max\_speed} o bajar \cmd{stop\_distance} hasta que falle; ¿cómo falla?
+    \item \textbf{Estación}: subir \cmd{low\_percent} a 0.9 para que vaya a cargar más seguido.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Problemas comunes (1/2)}
+  \centering\scriptsize
+  \begin{tabular}{p{4.4cm}p{8.4cm}}
+    \toprule
+    Síntoma & Causa y arreglo \\
+    \midrule
+    No arma; \cmd{No connection to the GCS} & QGC no está abierto: \cmd{vespo qgc} (o usar \cmd{vespo up --sim}) \\
+    \cmd{PX4 rechazó el comando 176} & El modo pedido no se puede ahora (p. ej. armar desde Land): pasar por Hold \\
+    El dron se va al suelo o hacia arriba & Signo de $z$: en NED arriba es negativo \\
+    La trayectoria se adelanta al dron & Tiempo con \cmd{now()} y la simulación lenta: usar \cmd{px4\_.clock()} \\
+    ``Fuera de OFFBOARD'' sin tocar nada & El nodo dejó de publicar \textgreater0.5 s (un \cmd{return} antes de \cmd{offboard()}, un bloqueo) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Problemas comunes (2/2)}
+  \centering\scriptsize
+  \begin{tabular}{p{4.4cm}p{8.4cm}}
+    \toprule
+    Síntoma & Causa y arreglo \\
+    \midrule
+    \cmd{/x500/scan} o \cmd{/x500/camera/image} vacíos & El puente no está: usar el \emph{launch}; revisar el modelo (\cmd{--custom}) y el nombre del mundo \\
+    El detector no ve nada & Falta \cmd{camera\_info} (el detector la espera), marcador muy chico o sin margen blanco \\
+    La RAM de Gazebo crece sin parar & Cámara pesada o plugin de video de PX4: usar \cmd{x500\_cam\_abajo} y nuestros mundos \\
+    La laptop se apaga sola & Sin cargador: conectar \\
+    Un mundo modificado no cambia & Faltó \cmd{build\_worlds.py} y \cmd{vespo build} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{Chuleta}
+  \begin{lstlisting}[style=bash,caption={Lo de todos los días}]
+vespo build                                            # compilar
+vespo up --sim --world <mundo> [--custom <modelo>]      # simular
+ros2 run x500_retos <nodo> --ros-args -p <param>:=<valor>
+ros2 launch x500_retos {cueva,caza,estacion}.launch.py
+ros2 topic echo /fmu/out/vehicle_status_v1 --field nav_state
+ros2 run rqt_image_view rqt_image_view /x500/aruco/debug
+python3 src/x500_retos/tools/build_worlds.py            # regenerar mundos
+gz topic -e -t /world/<mundo>/stats -n 1 | grep real_time   # ¿va a 1.0x?
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Para cerrar}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\small
+    \begin{enumerate}
+      \item \textbf{Nivel 1}: muévanse bien (geometría, derivadas, comandos).
+      \item \textbf{Nivel 2}: que el dron decida (predecir, reaccionar a un sensor).
+      \item \textbf{Nivel 3}: que vea (percepción separada del control).
+    \end{enumerate}
+    \vspace{0.4em}
+    No se salta de nivel sin cerrar al menos dos misiones del anterior.
+    \column{0.42\textwidth}\centering
+    \includegraphics[width=0.75\linewidth]{vespo_logo}\\[0.5em]
+    {\Large ¿Preguntas?}
+  \end{columns}
+\end{frame}
