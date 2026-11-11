@@ -1,0 +1,10 @@
+# Temporales de LaTeX (el PDF sí se guarda)
+*.aux
+*.log
+*.nav
+*.out
+*.snm
+*.toc
+*.vrb
+*.fls
+*.fdb_latexmk

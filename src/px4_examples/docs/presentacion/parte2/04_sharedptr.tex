@@ -1,0 +1,170 @@
+% =============================================================================
+\section{shared\_ptr: lo único de C++ que hoy hace falta}
+% =============================================================================
+
+\begin{frame}{El problema: un mensaje, muchos interesados}
+  \begin{columns}[c]
+    \column{0.52\textwidth}\centering
+    \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+      \node (d) at (0,0) {\dronarriba{1.6cm}};
+      \node[draw=gray,fill=yellow!15,rounded corners,minimum width=1.9cm,minimum height=1cm] (m) at (2.8,0)
+        {un mensaje\\\cmd{VehicleStatus}};
+      \draw[-{Stealth},thick,verde] (d) -- (m);
+      \foreach \y/\n/\k in {1.3/telemetry\_listener/a,0/tu misión/b,-1.3/battery\_monitor/c} {
+        \node[draw=azul,fill=azulclaro,rounded corners] (n\k) at (6.2,\y) {\n};
+        \draw[-{Stealth},thick] (m) -- (n\k.west);}
+    \end{tikzpicture}
+    \column{0.45\textwidth}\small
+    \begin{itemize}
+      \item Llega un mensaje y lo quieren \textbf{varias} partes del programa.
+      \item ¿Copiarlo para cada una? Lento.
+      \item ¿Compartir el original? Entonces, \textbf{¿quién lo borra} y cuándo? Si se borra antes de tiempo,
+        el programa truena; si nadie lo borra, se acaba la memoria.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Primero: un apuntador es una dirección}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering
+    \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+      \draw[fill=yellow!15,rounded corners] (3,0) rectangle (5.4,1.5);
+      \node at (4.2,1.1) {\textbf{la casa}};
+      \node at (4.2,0.5) {(el mensaje)};
+      \node[below,font=\tiny] at (4.2,0) {Calle Dron 14};
+      \draw[fill=azulclaro,rounded corners] (0,0.35) rectangle (2,1.15);
+      \node at (1,0.75) {papelito:\\``Calle Dron 14''};
+      \node[below,font=\tiny] at (1,0.35) {el apuntador};
+      \draw[-{Stealth},thick,rojo] (2,0.75) -- (3,0.75);
+    \end{tikzpicture}
+    \column{0.47\textwidth}\small
+    \begin{itemize}
+      \item El mensaje vive en un lugar de la memoria (la \textbf{casa}).
+      \item Un \textbf{apuntador} es un papelito con la dirección. Copiar el papelito es barato; copiar la
+        casa no.
+      \item \cmd{msg->nav\_state}: ve a esa dirección y lee \cmd{nav\_state}.
+      \item \cmd{*msg}: la casa completa.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{shared\_ptr: la casa que se borra sola}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering
+    \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+      \draw[alt=<6>{fill=gray!20,draw=gray}{fill=yellow!15}, rounded corners] (3,-0.6) rectangle (5.6,1.4);
+      \node at (4.3,1.0) {\textbf{mensaje}};
+      \node[alt=<6>{text=gris}{}] at (4.3,0.4) {\only<1,5>{dueños: \textbf{1}}\only<2,4>{dueños: \textbf{2}}\only<3>{dueños: \textbf{3}}\only<6>{dueños: \textbf{0}}};
+      \node[font=\scriptsize\bfseries,text=rojo,visible on=<6>] at (4.3,-0.2) {¡borrado!};
+      \node[draw=azul,fill=azulclaro,rounded corners,minimum width=1.5cm,alt=<1-5>{}{invisible}] (a) at (0.6,1.2) {\cmd{a}};
+      \node[draw=azul,fill=azulclaro,rounded corners,minimum width=1.5cm,visible on=<2-4>] (b) at (0.6,0.4) {\cmd{b}};
+      \node[draw=azul,fill=azulclaro,rounded corners,minimum width=1.5cm,visible on=<3>] (c) at (0.6,-0.4) {\cmd{c}};
+      \draw[-{Stealth},thick,visible on=<1-5>] (a) -- (3,0.8);
+      \draw[-{Stealth},thick,visible on=<2-4>] (b) -- (3,0.4);
+      \draw[-{Stealth},thick,visible on=<3>] (c) -- (3,0);
+    \end{tikzpicture}
+    \column{0.47\textwidth}
+    \begin{lstlisting}[style=cpp,escapechar=!]
+auto a = std::make_shared<VehicleStatus>();  !\only<1>{\textcolor{rojo}{$\blacktriangleleft$}}!
+{
+  auto b = a;     // copia el papelito  !\only<2>{\textcolor{rojo}{$\blacktriangleleft$}}!
+  {
+    auto c = a;  !\only<3>{\textcolor{rojo}{$\blacktriangleleft$}}!
+  }  // c deja de existir  !\only<4>{\textcolor{rojo}{$\blacktriangleleft$}}!
+}    // b deja de existir  !\only<5>{\textcolor{rojo}{$\blacktriangleleft$}}!
+// a deja de existir: nadie lo usa  !\only<6>{\textcolor{rojo}{$\blacktriangleleft$}}!
+    \end{lstlisting}
+    \small
+    \only<1>{Se crea el mensaje. Una variable lo apunta: \textbf{1 dueño}.}%
+    \only<2>{Copiar un \cmd{shared\_ptr} copia la dirección, no el mensaje. Ahora son \textbf{2}.}%
+    \only<3>{Otro más: \textbf{3} dueños. Los tres ven el \textbf{mismo} mensaje.}%
+    \only<4>{Cuando \cmd{c} sale de sus llaves, deja de existir y la cuenta baja.}%
+    \only<5>{Lo mismo con \cmd{b}.}%
+    \only<6>{El último dueño desaparece: la cuenta llega a 0 y el mensaje \textbf{se borra solo}. Nadie tuvo que
+      acordarse.}%
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Por eso en ROS 2 todo es SharedPtr}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+      bx/.style={draw=azul,fill=azulclaro,rounded corners,text width=3.2cm,minimum height=1.25cm}]
+    \node[bx] at (0,0) {\textbf{Los mensajes}\\\cmd{VehicleStatus::SharedPtr msg}\\se entregan sin copiar};
+    \node[bx] at (4.2,0) {\textbf{El nodo}\\\cmd{std::make\_shared<Nodo>()}\\vive mientras gira};
+    \node[bx] at (8.4,0) {\textbf{Publishers, subs, timers}\\\cmd{...::SharedPtr pub\_}\\existen mientras los guardes};
+  \end{tikzpicture}
+  \vspace{0.6em}
+
+  \begin{idea}
+    \small \cmd{VehicleStatus::SharedPtr} es solo otro nombre para \cmd{std::shared\_ptr<VehicleStatus>}. Cuando
+    lo veas, piensa: ``un papelito con la dirección de un \cmd{VehicleStatus}''.
+  \end{idea}
+\end{frame}
+
+\begin{frame}[fragile]{En los ejemplos: guardar una copia con *msg}
+  \begin{lstlisting}[style=cpp,escapechar=!]
+VehicleStatus status_;                       // !\textbf{la última copia}!, para usarla después
+
+status_sub_ = create_subscription<VehicleStatus>(
+  "/fmu/out/vehicle_status_v1", qos,
+  [this](const VehicleStatus::SharedPtr msg) {   // msg = el papelito
+    status_ = *msg;                              // *msg = el mensaje: se copia
+  });
+  \end{lstlisting}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+    \node[draw=azul,fill=azulclaro,rounded corners] (m) at (0,0) {\cmd{msg}\\(SharedPtr)};
+    \node[draw=gray,fill=yellow!15,rounded corners] (x) at (3.2,0) {mensaje que llegó\\(se borra al salir)};
+    \node[draw=verde,fill=verdeclaro,rounded corners] (s) at (7.2,0) {\cmd{status\_}\\copia que se queda};
+    \draw[-{Stealth},thick] (m) -- (x);
+    \draw[-{Stealth},thick,verde] (x) -- node[above]{\cmd{status\_ = *msg}} (s);
+  \end{tikzpicture}
+  \vspace{0.3em}
+
+  \raggedright\small El callback \textbf{guarda}; el timer, cada 100 ms, \textbf{decide} con lo último que
+  guardó. Así están hechos todos los ejemplos.
+\end{frame}
+
+\begin{frame}[fragile]{El error clásico: la suscripción que se muere}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{ojo}[title={\small\bfseries MAL: nunca recibe nada}]
+      \begin{lstlisting}[style=cpp,frame=none]
+Nodo() : Node("nodo") {
+  auto sub = create_subscription<...>(...);
+}  // sub era local: aqui se borra
+   // y la suscripcion con el
+      \end{lstlisting}
+    \end{ojo}
+    \column{0.48\textwidth}
+    \begin{idea}[title={\small\bfseries BIEN: como en los ejemplos},coltitle=black,colbacktitle=azulclaro]
+      \begin{lstlisting}[style=cpp,frame=none]
+rclcpp::Subscription<...>::SharedPtr sub_;
+Nodo() : Node("nodo") {
+  sub_ = create_subscription<...>(...);
+}  // sub_ es del nodo: vive con el
+      \end{lstlisting}
+    \end{idea}
+  \end{columns}
+  \vspace{0.3em}
+  \small Es el \cmd{shared\_ptr} en acción: cuando el último dueño desaparece, el objeto se borra. Guarda
+  publishers, subscriptions y timers en variables \textbf{del nodo} (las que terminan en \cmd{\_}).
+\end{frame}
+
+\begin{frame}{Resumen: punto, flecha y asterisco}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    Escribes & Cuando tienes & Significa \\
+    \midrule
+    \cmd{status\_.nav\_state} & un mensaje (\cmd{VehicleStatus}) & el campo, directo \\
+    \cmd{msg->nav\_state} & un apuntador (\cmd{SharedPtr}) & ve a la dirección y lee el campo \\
+    \cmd{*msg} & un apuntador & el mensaje completo \\
+    \cmd{pub\_->publish(m)} & un publisher (\cmd{SharedPtr}) & llamar una función a través del apuntador \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+
+  \raggedright\small Regla rápida: si la variable es un \cmd{SharedPtr}, usa \cmd{->}; si es el objeto,
+  usa \cmd{.}. El compilador te avisa si te equivocas.
+\end{frame}

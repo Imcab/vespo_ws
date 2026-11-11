@@ -1,0 +1,127 @@
+% =============================================================================
+\section{Un topic propio}
+% =============================================================================
+
+\begin{frame}{battery\_publisher y battery\_subscriber}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize},
+      bx/.style={draw=azul,fill=azulclaro,rounded corners,minimum height=0.8cm,minimum width=2.4cm,align=center}]
+    \node[bx,fill=gray!15,draw=gray] (px) at (0,0) {PX4};
+    \node[bx] (pub) at (4.4,0) {battery\_publisher\\(traduce)};
+    \node[bx] (sub) at (9.4,0) {battery\_subscriber\\(muestra)};
+    \node[bx,fill=gray!10,draw=gray] (any) at (9.4,-1.6) {cualquier otro nodo\\o \cmd{ros2 topic echo}};
+    \draw[-{Stealth}] (px) -- node[above,font=\tiny,align=center]{battery\_status\_v1\\BatteryStatus} (pub);
+    \draw[-{Stealth},thick,naranja] (pub) -- node[above,font=\tiny,align=center]{/vespo/battery\_percent\\std\_msgs/Float32} (sub);
+    \draw[-{Stealth},thick,naranja] (pub.south) |- (any.west);
+  \end{tikzpicture}
+  \vspace{0.6em}
+  \begin{itemize}\small
+    \item Un nodo \textbf{traduce} lo que dice PX4 a algo simple: solo el porcentaje.
+    \item Cualquier otro nodo lo usa \textbf{sin saber nada} de \cmd{px4\_msgs}: una interfaz, la misión, un
+      registro\ldots
+    \item Es el patrón para pasarse datos entre nodos nuestros.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{El publisher}
+  \begin{lstlisting}[style=cpp,caption={battery\_publisher.cpp}]
+// Publisher con QoS por defecto: rclcpp::QoS(10) = reliable, cola de 10.
+percent_pub_ = create_publisher<Float32>("/vespo/battery_percent", 10);
+
+auto px4_qos = rclcpp::QoS(1).best_effort().transient_local();
+battery_sub_ = create_subscription<BatteryStatus>(
+  "/fmu/out/battery_status_v1", px4_qos,
+  [this](const BatteryStatus::SharedPtr msg) {
+    // remaining = -1 cuando PX4 aún no sabe: no publicamos basura.
+    if (!msg->connected || msg->remaining < 0.0f) {
+      return;
+    }
+    Float32 out;
+    out.data = msg->remaining * 100.0f;   // 0..1 -> 0..100 %
+    percent_pub_->publish(out);
+  });
+  \end{lstlisting}
+  \small Publica \textbf{dentro} del callback: cada vez que llega una batería de PX4 (1 Hz), sale un
+  porcentaje. No hace falta timer.
+\end{frame}
+
+\begin{frame}{Las decisiones de diseño}
+  \centering\small
+  \begin{tabular}{lp{7.6cm}}
+    \toprule
+    Decisión & Por qué \\
+    \midrule
+    Nombre \cmd{/vespo/...} & Convención del equipo: nuestros topics no se confunden con los de PX4
+      (\cmd{/fmu/...}) ni de otros paquetes. \\
+    \cmd{std\_msgs/Float32} & Un mensaje estándar con un solo campo (\cmd{data}): no hace falta crear uno. \\
+    QoS por defecto (\cmd{10}) & Entre nodos de ROS 2 no hace falta el best\_effort de PX4: reliable, cola de 10. \\
+    Filtrar \cmd{remaining < 0} & $-1$ = ``PX4 no sabe'': mejor no publicar que publicar basura. \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{El subscriber}
+  \begin{lstlisting}[style=cpp,caption={battery\_subscriber.cpp}]
+percent_sub_ = create_subscription<Float32>(
+  "/vespo/battery_percent", 10,
+  [this](const Float32::SharedPtr msg) {on_percent(msg->data);});
+
+void on_percent(float percent) {
+  // Barra de 20 caracteres: cada # vale 5 %.
+  const int filled = static_cast<int>(percent / 5.0f + 0.5f);
+  std::string bar;
+  for (int i = 0; i < 20; i++) {
+    bar += i < filled ? "#" : ".";
+  }
+  if (percent < low_percent_) {
+    RCLCPP_WARN(get_logger(), "[%s] %5.1f %%  BAJA", bar.c_str(), percent);
+  } else {
+    RCLCPP_INFO(get_logger(), "[%s] %5.1f %%", bar.c_str(), percent);
+  }
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Detalles del subscriber}
+  \begin{columns}[c]
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item El callback llama a un método (\cmd{on\_percent}) con \textbf{solo el número}: el resto del código
+        no sabe de mensajes.
+      \item \cmd{+ 0.5f} antes de convertir a \cmd{int} \textbf{redondea} (sin él, \cmd{static\_cast} trunca:
+        9.9 $\rightarrow$ 9).
+      \item \cmd{bar.c\_str()}: \cmd{\%s} pide texto de C (\cmd{const char*}); \cmd{c\_str()} lo saca de un
+        \cmd{std::string}.
+    \end{itemize}
+    \column{0.45\textwidth}
+    \begin{terminal}{ros2 run px4\_examples battery\_subscriber}
+[\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#] 100.0 \%\\
+[\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#.\,.\,.] \ 84.5 \%\\
+[\#\#\#\#\#.\,.\,.\,.\,.\,.\,.\,.\,.\,.\,.\,.\,.\,.\,.] \ 25.0 \%\ \ BAJA
+    \end{terminal}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Probarlo sin PX4}
+  \begin{lstlisting}[style=bash]
+ros2 run px4_examples battery_subscriber            # terminal 1
+ros2 topic pub /vespo/battery_percent std_msgs/msg/Float32 "{data: 15.0}"   # terminal 2
+ros2 topic echo /vespo/battery_percent              # ver lo que pasa por el topic
+ros2 topic info /vespo/battery_percent              # quién publica y quién escucha
+  \end{lstlisting}
+  \begin{idea}
+    \small Como el subscriber solo depende del topic, se puede probar \textbf{sin simulación}: publiquen
+    valores a mano para ver el aviso de batería baja. Así se prueban las partes de una misión por separado.
+  \end{idea}
+\end{frame}
+
+\begin{frame}{Ejercicios}
+  \begin{enumerate}\small
+    \item Agreguen al publisher un segundo topic \cmd{/vespo/battery\_voltage} con el voltaje.
+    \item Hagan que el subscriber avise \textbf{una sola vez} al cruzar el umbral (no en cada mensaje).
+    \item Publiquen la altura actual (\cmd{-z} de \cmd{vehicle\_local\_position\_v1}) en
+      \cmd{/vespo/altitude} y grafíquenla con \cmd{rqt\_plot}.
+    \item Cambien el QoS del subscriber a \cmd{best\_effort}: ¿sigue funcionando? ¿Y si el que cambia es el
+      publisher?
+  \end{enumerate}
+\end{frame}

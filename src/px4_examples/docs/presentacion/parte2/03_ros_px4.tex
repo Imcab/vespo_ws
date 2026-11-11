@@ -1,0 +1,121 @@
+% =============================================================================
+\section{Cómo habla ROS 2 con PX4}
+% =============================================================================
+
+\begin{frame}{Tres programas en fila}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+    \node (d) at (0,0) {\dronarriba{2.6cm}};
+    \node[font=\small\bfseries] at (0,-1.7) {PX4};
+    \node[font=\tiny,text=gris] at (0,-2.1) {(en la Pixhawk o en SITL)};
+    \node[draw=azul,fill=azulclaro,rounded corners,minimum width=2.6cm,minimum height=1.4cm] (a) at (5,0)
+      {\textbf{MicroXRCEAgent}\\el traductor};
+    \node[draw=naranja,fill=yellow!25,rounded corners,minimum width=2.6cm,minimum height=1.4cm] (n) at (10,0)
+      {\textbf{tu nodo}\\de ROS 2};
+    \draw[-{Stealth},line width=1.5pt,verde] (1.6,0.35) -- node[above]{\cmd{/fmu/out/...}} (a.west |- 0,0.35);
+    \draw[{Stealth}-,line width=1.5pt,naranja] (1.6,-0.35) -- node[below]{\cmd{/fmu/in/...}} (a.west |- 0,-0.35);
+    \draw[-{Stealth},line width=1.5pt,verde] (a.east |- 0,0.35) -- node[above]{telemetría} (n.west |- 0,0.35);
+    \draw[{Stealth}-,line width=1.5pt,naranja] (a.east |- 0,-0.35) -- node[below]{órdenes} (n.west |- 0,-0.35);
+    \node[font=\tiny,text=gris] at (2.6,1.5) {UDP 8888 (sim)\\o cable serial (real)};
+    \node[font=\tiny,text=gris] at (7.5,1.5) {topics de ROS 2};
+  \end{tikzpicture}
+  \vspace{0.6em}
+
+  \raggedright\small
+  \begin{itemize}
+    \item PX4 no habla ROS 2 directamente: el \textbf{agente} traduce. \cmd{vespo up} lo arranca solo.
+    \item \textbf{Sin agente no existe ningún topic} \cmd{/fmu/...} en ROS 2.
+    \item \cmd{out}: PX4 te cuenta (\textcolor{verde}{verde}). \cmd{in}: tú le pides (\textcolor{naranja}{naranja}).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{El mapa de topics}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+      o/.style={draw=verde,fill=verdeclaro,rounded corners,text width=3.6cm,minimum height=0.7cm},
+      i/.style={draw=naranja,fill=yellow!20,rounded corners,text width=3.6cm,minimum height=0.7cm}]
+    \node (d) at (0,0) {\dronarriba{2.4cm}};
+    \node[o] (o1) at (-4.8,2.0) {\cmd{vehicle\_status\_v1}\\¿armado? ¿qué modo?};
+    \node[o] (o2) at (-4.8,0.65) {\cmd{vehicle\_local\_position\_v1}\\dónde está, en metros};
+    \node[o] (o3) at (-4.8,-0.7) {\cmd{vehicle\_global\_position}\\latitud, longitud};
+    \node[o] (o4) at (-4.8,-2.05) {\cmd{vehicle\_attitude}\\hacia dónde apunta};
+    \node[o] (o5) at (4.8,2.0) {\cmd{battery\_status\_v1}\\voltaje y \%};
+    \node[o] (o6) at (4.8,0.75) {\cmd{vehicle\_command\_ack}\\¿aceptó mi comando?};
+    \node[i] (i1) at (4.8,-0.6) {\cmd{offboard\_control\_mode}\\``sigo vivo'' (heartbeat)};
+    \node[i] (i2) at (4.8,-1.6) {\cmd{trajectory\_setpoint}\\a dónde ir};
+    \node[i] (i3) at (4.8,-2.6) {\cmd{vehicle\_command}\\armar, despegar, aterrizar\ldots};
+    \foreach \n in {o1,o2,o3,o4} \draw[-{Stealth},thick,verde] (d) -- (\n.east);
+    \foreach \n in {o5,o6} \draw[-{Stealth},thick,verde] (d) -- (\n.west);
+    \foreach \n in {i1,i2,i3} \draw[-{Stealth},thick,naranja] (\n.west) -- (d);
+  \end{tikzpicture}
+  \vspace{0.2em}
+
+  \raggedright\small Todos empiezan con \cmd{/fmu/out/} (verde) o \cmd{/fmu/in/} (naranja). Con estos
+  nueve se hacen los 18 ejemplos.
+\end{frame}
+
+\begin{frame}{La trampa del \_v1}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering
+    \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center}]
+      \node[draw=azul,fill=azulclaro,rounded corners] (p) at (0,0) {PX4 transmite en\\\cmd{vehicle\_status\_v1}};
+      \foreach \r in {0.4,0.7,1.0} \draw[naranja,thick] (1.25,0) ++(-40:\r) arc (-40:40:\r);
+      \node[draw=verde,fill=verdeclaro,rounded corners] at (4.4,0.9) {sintonizas\\\cmd{vehicle\_status\_v1}\\\color{verde}\bfseries te llega};
+      \node[draw=rojo,fill=red!5,rounded corners] at (4.4,-0.9) {sintonizas\\\cmd{vehicle\_status}\\\color{rojo}\bfseries silencio};
+    \end{tikzpicture}
+    \column{0.47\textwidth}\small
+    \begin{itemize}
+      \item Cuando PX4 cambia un mensaje, el nombre del topic cambia: \cmd{\_v1}, \cmd{\_v2}\ldots
+      \item Si te equivocas de nombre \textbf{no sale ningún error}: tu nodo se queda esperando para siempre.
+      \item Copia los nombres de los ejemplos, o de\\\cmd{ros2 topic list | grep fmu}.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{QoS: radio en vivo o carta certificada}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+    \begin{idea}[title={\small\bfseries best\_effort = radio en vivo},coltitle=black,colbacktitle=azulclaro]
+      \small Si un mensaje se pierde, ya pasó: el siguiente llega en milisegundos. \textbf{Así publica PX4}.
+    \end{idea}
+    \begin{idea}[title={\small\bfseries reliable = carta certificada},coltitle=black,colbacktitle=azulclaro]
+      \small Se reenvía hasta que llega. Es lo que usa ROS 2 si no dices nada.
+    \end{idea}
+    \column{0.47\textwidth}\centering\small
+    \begin{tabular}{llc}
+      \toprule
+      PX4 publica & tu nodo pide & ¿llega? \\
+      \midrule
+      best\_effort & best\_effort & \ok \\
+      best\_effort & reliable & \mal \\
+      \bottomrule
+    \end{tabular}
+    \vspace{0.6em}
+
+    \raggedright Por eso todos los ejemplos empiezan con:\\[0.2em]
+    \cmd{\scriptsize auto qos = rclcpp::QoS(1)}\\
+    \cmd{\scriptsize\ \ .best\_effort().transient\_local();}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Espiar desde la terminal}
+  \small Con \cmd{vespo up -{}-sim} corriendo, sin escribir código:
+  \begin{lstlisting}[style=bash]
+ros2 topic list | grep fmu                                   # que publica PX4
+ros2 topic echo /fmu/out/vehicle_status_v1 --field nav_state  # el modo, en vivo
+ros2 topic hz /fmu/out/vehicle_local_position_v1             # cada cuanto llega
+ros2 interface show px4_msgs/msg/TrajectorySetpoint          # los campos de un mensaje
+  \end{lstlisting}
+  \begin{columns}[c]
+    \column{0.45\textwidth}
+    \begin{terminal}{ros2 topic echo ... --field nav\_state}
+4\\
+---\\
+14\\
+---
+    \end{terminal}
+    \column{0.52\textwidth}\small
+    Cambia el modo desde QGC y míralo cambiar: \textbf{4} = Hold, \textbf{14} = Offboard, \textbf{18} = Land.
+    Es la forma más rápida de saber si PX4 te está haciendo caso.
+  \end{columns}
+\end{frame}

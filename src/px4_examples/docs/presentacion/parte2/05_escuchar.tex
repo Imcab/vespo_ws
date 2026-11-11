@@ -1,0 +1,163 @@
+% =============================================================================
+\section{Escuchar al dron}
+% =============================================================================
+
+\begin{frame}{Todos los que escuchan tienen la misma forma}
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+      bx/.style={draw=azul,fill=azulclaro,rounded corners,minimum height=1cm,text width=2.4cm}]
+    \node (d) at (0,0) {\dronarriba{1.8cm}};
+    \node[bx] (cb) at (3.4,0) {\textbf{callbacks}\\guardan: \cmd{status\_ = *msg}};
+    \node[bx,fill=yellow!20] (m) at (6.9,0) {\textbf{variables del nodo}\\\cmd{status\_}, \cmd{position\_}\ldots};
+    \node[bx] (t) at (10.4,0) {\textbf{timer} (1 Hz)\\lee e imprime};
+    \node[draw=verde,fill=verdeclaro,rounded corners,font=\ttfamily\tiny] (o) at (10.4,-1.7) {Estado: armado | modo: \ldots};
+    \draw[-{Stealth},thick,verde] (d) -- node[above,font=\tiny]{cuando llega} (cb);
+    \draw[-{Stealth},thick] (cb) -- (m);
+    \draw[-{Stealth},thick] (m) -- (t);
+    \draw[-{Stealth},thick] (t) -- (o);
+  \end{tikzpicture}
+  \vspace{0.5em}
+
+  \raggedright\small
+  \begin{itemize}
+    \item Los mensajes llegan a 50--250 Hz: si imprimes en el callback, la terminal se vuelve ilegible.
+    \item Por eso el callback solo \textbf{guarda} y un timer \textbf{imprime} una vez por segundo.
+    \item Ninguno de estos nodos manda órdenes: son seguros de correr \textbf{siempre}, incluso con el dron real.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{telemetry\_listener: todo de un vistazo}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+    \begin{terminal}{ros2 run px4\_examples telemetry\_listener}
+Estado: armado | modo: OFFBOARD (14)\\
+Local: x=4.98 y=0.02 alt=5.01 m\\
+\ \ | vel=(0.01, 1.98, 0.00) m/s\\
+GPS: lat=47.3980159 lon=8.5461640\\
+\ \ alt=5.1 m (AMSL)\\
+Actitud: roll=2.1° pitch=0.4° yaw=0.2°\\
+Batería: 15.40 V | 71 \%
+    \end{terminal}
+    \credito{Ejemplo durante \cmd{square\_mission}, yendo al este.}
+    \column{0.47\textwidth}\small
+    \begin{tabular}{@{}ll@{}}
+      \textbf{Estado} & \cmd{vehicle\_status\_v1} \\
+      \textbf{Local} & \cmd{vehicle\_local\_position\_v1} \\
+      \textbf{GPS} & \cmd{vehicle\_global\_position} \\
+      \textbf{Actitud} & \cmd{vehicle\_attitude} \\
+      \textbf{Batería} & \cmd{battery\_status\_v1} \\
+    \end{tabular}
+    \vspace{0.6em}
+    \begin{idea}
+      \small Pruébalo: con el dron en el aire, \textbf{muévelo desde QGC} y mira cómo cambian \cmd{x},
+      \cmd{y}, \cmd{alt} y el \cmd{yaw}. Así se aprende NED sin fórmulas.
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Leer las coordenadas: NED}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}
+      \draw[gray!30,step=0.6] (-0.3,-0.3) grid (3.3,3.3);
+      \draw[-{Stealth},thick,verde] (0,0) -- (0,3.3) node[above,font=\scriptsize] {x = Norte};
+      \draw[-{Stealth},thick,rojo] (0,0) -- (3.3,0) node[right,font=\scriptsize] {y = Este};
+      \node[font=\tiny,below left] at (0,0) {(0,0) despegue};
+      \node at (1.8,2.4) {\dronarriba{1.1cm}};
+      \draw[dashed,gray] (1.8,0) -- (1.8,2.4) -- (0,2.4);
+      \node[font=\tiny,left] at (0,2.4) {x=4};
+      \node[font=\tiny,below] at (1.8,0) {y=3};
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item \cmd{x}: metros al \textbf{norte} del despegue.
+      \item \cmd{y}: metros al \textbf{este}.
+      \item \cmd{z}: metros hacia \textbf{abajo}. Volando a 5 m, \cmd{z = -5}. Por eso los ejemplos imprimen
+        \cmd{alt = -z}.
+      \item \cmd{yaw}: hacia dónde apunta la nariz. 0° = norte, 90° = este.
+    \end{itemize}
+    \begin{ojo}
+      \small En Gazebo los ejes son otros (x al este, z arriba). Lo que importa para tu nodo es NED.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{flight\_mode\_monitor: el narrador}
+  \begin{columns}[c]
+    \column{0.45\textwidth}
+    \begin{terminal}{ros2 run px4\_examples flight\_mode\_monitor}
+DESARMADO\\
+Modo: Hold\\
+Chequeos de pre-vuelo: OK, se puede armar\\
+ARMADO\\
+Modo: Hold -> Offboard\\
+Modo: Offboard -> Hold\\
+FAILSAFE ACTIVO (modo Hold)\\
+Banderas de failsafe:\\
+\ \ señal offboard perdida
+    \end{terminal}
+    \column{0.52\textwidth}\centering
+    \begin{tikzpicture}[every node/.style={font=\scriptsize,align=center},
+        md/.style={draw=azul,fill=azulclaro,rounded corners,minimum width=1.6cm,minimum height=0.7cm}]
+      \node[md] (h) at (0,0) {Hold};
+      \node[md,fill=yellow!25] (o) at (2.6,0) {Offboard};
+      \node[md,fill=red!10,draw=rojo] (f) at (5.2,0) {Hold\\(failsafe)};
+      \draw[-{Stealth},thick] (h) -- node[above,font=\tiny]{tu nodo} (o);
+      \draw[-{Stealth},thick,rojo] (o) -- node[above,font=\tiny]{Ctrl+C} (f);
+    \end{tikzpicture}
+    \vspace{0.6em}
+
+    \raggedright\small Solo imprime cuando \textbf{algo cambia}: armado, modo, failsafe. Déjalo corriendo en una
+    terminal \textbf{siempre} que pruebes algo: te dice qué hizo PX4 y por qué.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{battery\_monitor: tu propio failsafe}
+  \begin{columns}[c]
+    \column{0.42\textwidth}\centering
+    \begin{tikzpicture}
+      \draw[thick,rounded corners=2pt] (0,0) rectangle (1.4,3.2);
+      \fill[gray] (0.45,3.2) rectangle (0.95,3.4);
+      \fill[verde!70] (0.08,0.08) rectangle (1.32,2.2);
+      \draw[rojo,line width=1.5pt] (-0.3,1.28) -- (1.7,1.28) node[right,font=\scriptsize,text=rojo] {\cmd{low\_percent}: 40 \%};
+      \node[font=\scriptsize\bfseries] at (0.7,1.7) {71 \%};
+      \node[font=\scriptsize,right,align=left] at (1.7,2.4) {arriba: \textbf{OK}};
+      \node[font=\scriptsize,right,align=left] at (1.7,0.5) {abajo: \textbf{acción}\\\cmd{warn}, \cmd{land} o \cmd{rtl}};
+    \end{tikzpicture}
+    \column{0.55\textwidth}
+    \begin{terminal}{battery\_monitor -p low\_percent:=40.0 -p action:=rtl}
+85.0 \% | 15.80 V (3.95 V/celda, 4S)\\
+\ \ | -1.0 A | OK\\
+BATERÍA BAJA: 39.8 \% (umbral 40 \%)\\
+Regresando a casa (RTL)
+    \end{terminal}
+    \small
+    \begin{itemize}
+      \item Escucha \cmd{battery\_status\_v1} y, bajo el umbral, \textbf{manda un comando} a PX4.
+      \item En SITL la batería se descarga \textbf{rapidísimo} a propósito (\textasciitilde50 \% en medio
+        minuto armado) para poder probar esto.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{Los cinco que escuchan}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    Ejemplo & Escucha & Para qué \\
+    \midrule
+    \cmd{telemetry\_listener} & estado, posición, GPS, actitud, batería & ver todo de un vistazo \\
+    \cmd{flight\_mode\_monitor} & estado, failsafes & saber qué hizo PX4 y por qué \\
+    \cmd{battery\_monitor} & batería & actuar con batería baja \\
+    \cmd{imu\_listener} & \cmd{sensor\_combined} & giroscopio y acelerómetro crudos \\
+    \cmd{gps\_status} & \cmd{vehicle\_gps\_position} & satélites, precisión, ¿listo para volar? \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.6em}
+
+  \raggedright
+  \begin{lstlisting}[style=bash]
+ros2 run px4_examples imu_listener      # quieto marca z = -9.8: la gravedad
+ros2 run px4_examples gps_status
+  \end{lstlisting}
+\end{frame}

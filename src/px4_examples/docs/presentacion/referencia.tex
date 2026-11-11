@@ -1,0 +1,43 @@
+\documentclass[aspectratio=169,10pt]{beamer}
+\input{estilo}
+
+% --- Portada --------------------------------------------------------------------
+\title[Referencia técnica]{PX4 + ROS 2 con px4\_examples: referencia técnica}
+\subtitle{El x500, los mensajes de PX4 campo por campo y los 18 ejemplos con su código}
+\author[Imad Cabrera]{Imad Jared Cabrera Trejo}
+\institute[Vespo UAV]{Vespo UAV Drones Autónomos}
+\date{11 de noviembre de 2026}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+  \vspace{-1.5em}
+  \begin{center}\includegraphics[height=1.2cm]{vespo_logo}\end{center}
+\end{frame}
+
+\begin{frame}{Agenda}
+  \begin{multicols}{2}\scriptsize
+    \tableofcontents
+  \end{multicols}
+\end{frame}
+
+\input{secciones/01_px4_x500}
+\input{secciones/02_ros_px4}
+\input{secciones/03_mensajes}
+\input{secciones/06_lectura}
+\input{secciones/07_topic_propio}
+\input{secciones/08_offboard}
+\input{secciones/09_comandos}
+
+\begin{frame}{Créditos de las imágenes}
+  \small
+  \begin{itemize}
+    \item \textbf{Fotos del X500 y la Pixhawk 6C, capturas de QGroundControl y el diagrama de uXRCE-DDS}:
+      documentación de PX4 (\cmd{docs.px4.io}), © PX4 / Dronecode y colaboradores, licencia \textbf{CC BY
+      4.0} (\cmd{creativecommons.org/licenses/by/4.0}). Solo se redimensionaron.
+    \item \textbf{Renders del x500}: propios, con Gazebo Harmonic sobre el modelo \cmd{x500} de PX4.
+  \end{itemize}
+\end{frame}
+
+\end{document}

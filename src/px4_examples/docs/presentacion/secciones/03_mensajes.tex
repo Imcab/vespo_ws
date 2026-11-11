@@ -1,0 +1,449 @@
+% =============================================================================
+\section{Los mensajes de PX4}
+% =============================================================================
+
+\begin{frame}[fragile]{Anatomía de un .msg}
+  \begin{columns}[c]
+    \column{0.52\textwidth}
+    \begin{lstlisting}[language=yaml,caption={px4\_msgs/msg/VehicleCommandAck.msg (recortado)}]
+uint32 MESSAGE_VERSION = 0       # constante
+
+uint8 VEHICLE_CMD_RESULT_ACCEPTED = 0
+uint8 VEHICLE_CMD_RESULT_DENIED = 2
+
+uint64 timestamp      # campo: tipo nombre
+uint32 command
+uint8 result
+    \end{lstlisting}
+    \column{0.45\textwidth}\small
+    \begin{itemize}
+      \item Cada línea es \textbf{tipo nombre} (un campo) o \textbf{tipo NOMBRE = valor} (una constante).
+      \item \cmd{colcon build} genera una \textbf{estructura de C++} con esos campos.
+      \item Las constantes quedan como miembros estáticos:
+        \cmd{VehicleCommandAck::VEHICLE\_CMD\_RESULT\_DENIED}.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Tipos de los .msg y su tipo en C++}
+  \centering\small
+  \begin{tabular}{lll}
+    \toprule
+    En el .msg & En C++ & Para qué \\
+    \midrule
+    \cmd{bool} & \cmd{bool} & banderas: \cmd{xy\_valid}, \cmd{failsafe} \\
+    \cmd{uint8} & \cmd{uint8\_t} (0..255) & modos y estados: \cmd{nav\_state}, \cmd{arming\_state} \\
+    \cmd{uint32} & \cmd{uint32\_t} & ids de comando: \cmd{command} \\
+    \cmd{uint64} & \cmd{uint64\_t} & tiempos en µs: \cmd{timestamp} \\
+    \cmd{float32} & \cmd{float} & casi todo: posición, velocidad, ángulos \\
+    \cmd{float64} & \cmd{double} & latitud y longitud (necesitan precisión) \\
+    \cmd{float32[3]} & \cmd{std::array<float, 3>} & vectores: \cmd{position}, \cmd{velocity} \\
+    \cmd{float32[4]} & \cmd{std::array<float, 4>} & cuaterniones: \cmd{q} \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.4em}
+
+  \raggedright\footnotesize \cmd{float} tiene \textasciitilde7 dígitos: alcanza para metros, no para grados de latitud
+  (47.3979711$^\circ$ necesita 9). Por eso \cmd{lat}/\cmd{lon} son \cmd{float64}.
+\end{frame}
+
+\begin{frame}[fragile]{Del .msg al \#include}
+  \begin{lstlisting}[style=cpp,caption={El archivo va en snake\_case, el tipo en CamelCase}]
+#include "px4_msgs/msg/vehicle_status.hpp"        // archivo: vehicle_status
+using px4_msgs::msg::VehicleStatus;               // tipo: VehicleStatus
+
+VehicleStatus status;                              // una variable de ese tipo
+if (status.nav_state == VehicleStatus::NAVIGATION_STATE_OFFBOARD) { ... }
+  \end{lstlisting}
+  \small
+  \begin{itemize}
+    \item \cmd{px4\_msgs::msg::} es el \emph{namespace} (paquete \cmd{px4\_msgs}, carpeta \cmd{msg}).
+    \item \cmd{using} evita escribir el nombre completo cada vez (como \cmd{from px4\_msgs.msg import ...} en Python).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{VehicleStatus: el estado general}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Tipo & Qué es \\
+      \midrule
+      \cmd{arming\_state} & uint8 & 1 desarmado, 2 armado \\
+      \cmd{nav\_state} & uint8 & el modo activo (14 = Offboard) \\
+      \cmd{nav\_state\_user\_intention} & uint8 & el modo que \emph{pidió} el usuario \\
+      \cmd{failsafe} & bool & ¿hay un failsafe activo? \\
+      \cmd{pre\_flight\_checks\_pass} & bool & ¿se puede armar? \\
+      \cmd{gcs\_connection\_lost} & bool & ¿se perdió QGC? \\
+      \cmd{armed\_time} & uint64 & cuándo armó (µs) \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/out/vehicle\_status\_v1}.
+    \vspace{0.3em}
+
+    Es el \textbf{heartbeat} de PX4: casi todos los ejemplos lo leen para saber si ya armó y en qué modo
+    está.
+    \begin{idea}
+      \small Si \cmd{nav\_state} $\neq$ \cmd{nav\_state\_user\_intention}, PX4 está haciendo otra cosa que lo
+      que pediste (p. ej. un failsafe).
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VehicleLocalPosition: dónde estoy (en metros)}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Unidad & Qué es \\
+      \midrule
+      \cmd{x, y, z} & m & norte, este, abajo (NED) \\
+      \cmd{vx, vy, vz} & m/s & velocidad NED \\
+      \cmd{ax, ay, az} & m/s$^2$ & aceleración NED \\
+      \cmd{heading} & rad & yaw, $-\pi..\pi$, 0 = norte \\
+      \cmd{xy\_valid}, \cmd{z\_valid} & bool & ¿la estimación sirve? \\
+      \cmd{dist\_bottom} & m & distancia al suelo (si hay sensor) \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/out/vehicle\_local\_position\_v1}.
+    \begin{ojo}
+      \small El origen es donde \textbf{arrancó PX4} (no donde está el dron ahora), y $z$ es hacia
+      \textbf{abajo}: la altura es \cmd{-z}.
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{NED: el marco de VehicleLocalPosition}
+  \begin{columns}[c]
+    \column{0.45\textwidth}\centering
+    \begin{tikzpicture}[scale=1.2]
+      \draw[-{Stealth},thick,verde] (0,0) -- (0,1.8) node[above,font=\scriptsize] {x = Norte};
+      \draw[-{Stealth},thick,rojo] (0,0) -- (1.8,0) node[right,font=\scriptsize] {y = Este};
+      \draw[-{Stealth},thick,azul] (0,0) -- (0.9,-0.75) node[below right,font=\scriptsize] {z = Abajo};
+      \fill (0,0) circle (1.5pt) node[below left,font=\tiny] {donde arrancó PX4};
+      \fill[naranja] (0.8,1.2) circle (2.5pt) node[right,font=\tiny,black] {$(1.2,\ 0.8,\ -5)$: 5 m arriba};
+    \end{tikzpicture}
+    \column{0.52\textwidth}\small
+    \begin{itemize}
+      \item \textbf{N}orth, \textbf{E}ast, \textbf{D}own: el estándar de la aviación.
+      \item Mandar $z = -5$ es pedir \textbf{5 m de altura}; $z = +5$ es pedir 5 m bajo tierra.
+      \item ROS usa ENU (x este, y norte, z arriba). PX4 usa NED en todos sus mensajes: no hay que
+        mezclarlos.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VehicleGlobalPosition: dónde estoy (en el planeta)}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Tipo & Qué es \\
+      \midrule
+      \cmd{lat}, \cmd{lon} & float64 & grados \\
+      \cmd{alt} & float32 & m sobre el nivel del mar (AMSL) \\
+      \cmd{lat\_lon\_valid}, \cmd{alt\_valid} & bool & ¿sirve? \\
+      \cmd{eph}, \cmd{epv} & float32 & error estimado horiz./vert. (m) \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/out/vehicle\_global\_position}.
+    \vspace{0.3em}
+
+    Es la estimación del EKF2 (no el GPS crudo). Los comandos de PX4 (\cmd{NAV\_TAKEOFF},
+    \cmd{DO\_REPOSITION}, \cmd{DO\_SET\_HOME}) piden coordenadas y \textbf{altitud AMSL}, no metros locales.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VehicleAttitude: la orientación como cuaternión}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    Topic: \cmd{/fmu/out/vehicle\_attitude}. Un solo campo importante:
+    \begin{center}\cmd{float32[4] q} \quad $= [w,\ x,\ y,\ z]$\end{center}
+    la rotación del cuerpo (FRD) a NED.
+    \begin{itemize}
+      \item Un \textbf{cuaternión} describe una rotación con 4 números sin los problemas de los ángulos de
+        Euler (\emph{gimbal lock}).
+      \item Cuidado: PX4 lo da como $[w, x, y, z]$; ROS (\cmd{geometry\_msgs}) usa $[x, y, z, w]$.
+    \end{itemize}
+    \column{0.47\textwidth}\centering
+    \begin{tikzpicture}[scale=1.0]
+      \draw[thick,fill=gray!20,rotate=20] (-1,-0.12) rectangle (1,0.12);
+      \draw[-{Stealth},verde,thick,rotate=20] (0,0) -- (1.5,0) node[right,font=\tiny] {frente};
+      \draw[dashed,gray] (0,0) -- (1.6,0);
+      \draw[-{Stealth},azul] (1.1,0) arc (0:20:1.1);
+      \node[font=\tiny,azul] at (1.35,0.25) {pitch};
+      \node[font=\tiny] at (0,-0.8) {roll, pitch, yaw = 3 ángulos};
+      \node[font=\tiny] at (0,-1.1) {q = la misma rotación en 4 números};
+    \end{tikzpicture}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{De cuaternión a roll, pitch y yaw}
+  \begin{lstlisting}[style=cpp,caption={telemetry\_listener.cpp}]
+// PX4 da el cuaternión en orden [w, x, y, z] (ROS usa [x, y, z, w]).
+const float w = attitude_.q[0];
+const float x = attitude_.q[1];
+const float y = attitude_.q[2];
+const float z = attitude_.q[3];
+const float roll = std::atan2(2.0f * (w * x + y * z), 1.0f - 2.0f * (x * x + y * y));
+// asin solo acepta valores en [-1, 1]; std::clamp evita NaN por redondeo.
+const float pitch = std::asin(std::clamp(2.0f * (w * y - z * x), -1.0f, 1.0f));
+const float yaw = std::atan2(2.0f * (w * z + x * y), 1.0f - 2.0f * (y * y + z * z));
+  \end{lstlisting}
+  \small Con el dron nivelado: roll $\approx$ pitch $\approx 0$ y yaw = hacia dónde apunta la nariz (igual a
+  \cmd{heading} de la posición local).
+\end{frame}
+
+\begin{frame}{SensorCombined: la IMU}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Unidad & Qué es \\
+      \midrule
+      \cmd{gyro\_rad[3]} & rad/s & velocidad de giro en x, y, z (FRD) \\
+      \cmd{accelerometer\_m\_s2[3]} & m/s$^2$ & aceleración medida (FRD) \\
+      \cmd{gyro\_integral\_dt} & µs & periodo de muestreo \\
+      \cmd{accelerometer\_clipping} & bits & ¿se saturó algún eje? \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/out/sensor\_combined}, a cientos de Hz.
+    \begin{idea}
+      \small Quieto en el suelo el acelerómetro marca $(0, 0, -9.81)$: mide la fuerza que lo
+      \textbf{sostiene} (el suelo empuja hacia arriba, que en FRD es $z$ negativa), no la gravedad.
+    \end{idea}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{SensorGps: el GPS crudo}
+  \small Topic: \cmd{/fmu/out/vehicle\_gps\_position} (versión 0: sin sufijo). Es lo que dice el receptor,
+  \textbf{antes} del EKF2. Sirve para saber si ya se puede volar con GPS (\cmd{gps\_status}).
+  \vspace{0.5em}
+
+  \centering\scriptsize
+  \begin{tabular}{ll}
+    \toprule
+    Campo & Qué es \\
+    \midrule
+    \cmd{fix\_type} & 0--1 sin fix, 2 = 2D, 3 = 3D, 4 = DGPS, 5 = RTK float, 6 = RTK fixed \\
+    \cmd{satellites\_used} & satélites usados en la solución \\
+    \cmd{eph}, \cmd{epv} & error estimado horizontal / vertical (m) \\
+    \cmd{hdop} & qué tan buena es la geometría de los satélites ($<2$ es buena) \\
+    \cmd{latitude\_deg}, \cmd{longitude\_deg} & posición (float64) \\
+    \cmd{jamming\_state} & 0 desconocido, 1 OK, 2 mitigado, 3 interferencia detectada \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{BatteryStatus}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Unidad & Qué es (inválido) \\
+      \midrule
+      \cmd{connected} & bool & ¿hay batería? \\
+      \cmd{voltage\_v} & V & voltaje total (0) \\
+      \cmd{current\_a} & A & corriente ($-1$: sin sensor, como en SITL) \\
+      \cmd{remaining} & 0..1 & carga restante ($-1$) \\
+      \cmd{time\_remaining\_s} & s & hasta vacía (NaN) \\
+      \cmd{cell\_count} & -- & celdas (4S = 4) \\
+      \cmd{warning} & -- & 0 nada, 1 baja, 2 crítica, 3 emergencia \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/out/battery\_status\_v1}, a \textbf{1 Hz} (lo limita \cmd{dds\_topics.yaml}).
+    \begin{ojo}
+      \small Muchos campos usan un valor ``imposible'' para decir \textbf{no sé}: $-1$ o NaN. Revísenlo antes
+      de usar el dato (\cmd{battery\_publisher} lo hace).
+    \end{ojo}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{FailsafeFlags y HomePosition}
+  \begin{columns}[t]
+    \column{0.48\textwidth}\small
+    \textbf{\cmd{/fmu/out/failsafe\_flags}}: \textasciitilde26 banderas (casi todas \cmd{bool}), una por cada cosa que PX4 vigila:
+    \begin{itemize}\scriptsize
+      \item \cmd{local\_position\_invalid}, \cmd{global\_position\_invalid}
+      \item \cmd{home\_position\_invalid}
+      \item \cmd{offboard\_control\_signal\_lost}
+      \item \cmd{manual\_control\_signal\_lost}, \cmd{gcs\_connection\_lost}
+      \item \cmd{battery\_warning}, \cmd{geofence\_breached}\ldots
+    \end{itemize}
+    \column{0.48\textwidth}\small
+    \textbf{\cmd{/fmu/out/home\_position\_v1}}: ``casa'', a donde va Return.
+    \begin{itemize}\scriptsize
+      \item \cmd{lat}, \cmd{lon}, \cmd{alt}: en GPS
+      \item \cmd{x}, \cmd{y}, \cmd{z}: en NED local
+      \item \cmd{valid\_hpos}, \cmd{valid\_alt}
+      \item \cmd{update\_count}: sube cada vez que casa cambia
+    \end{itemize}
+    PX4 la fija \textbf{donde arma} y solo la publica cuando cambia.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{VehicleCommand: pedirle algo a PX4}
+  \begin{columns}[c]
+    \column{0.55\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Tipo & Qué es \\
+      \midrule
+      \cmd{command} & uint32 & qué comando (\cmd{VEHICLE\_CMD\_\ldots}) \\
+      \cmd{param1..param4} & float32 & sus parámetros \\
+      \cmd{param5, param6} & \textbf{float64} & normalmente lat, lon \\
+      \cmd{param7} & float32 & normalmente altitud \\
+      \cmd{target\_system} & uint8 & a quién va (1) \\
+      \cmd{target\_component} & uint8 & 1 (0 = todos) \\
+      \cmd{source\_system/component} & -- & quién lo manda (1, 1) \\
+      \cmd{from\_external} & bool & \textbf{true}: viene de afuera de PX4 \\
+      \bottomrule
+    \end{tabular}
+    \column{0.42\textwidth}\small
+    Topic: \cmd{/fmu/in/vehicle\_command}.
+    \vspace{0.3em}
+
+    Son los comandos de \textbf{MAVLink} (los mismos que manda QGC): cada uno define qué significa cada
+    parámetro.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Los comandos que usan los ejemplos}
+  \centering\scriptsize
+  \begin{tabular}{lll}
+    \toprule
+    Comando & Parámetros & Ejemplos \\
+    \midrule
+    \cmd{DO\_SET\_MODE} & p1 = 1; p2 = 6 offboard, o p2 = 4 + p3 = 3 Hold & casi todos \\
+    \cmd{COMPONENT\_ARM\_DISARM} & p1 = 1 armar, 0 desarmar & todos los que vuelan \\
+    \cmd{NAV\_TAKEOFF} & p5, p6 = lat, lon; p7 = alt AMSL & orbit\_command, goto\ldots \\
+    \cmd{NAV\_LAND} & --- & square, orbit, figure\_eight\ldots \\
+    \cmd{NAV\_RETURN\_TO\_LAUNCH} & --- & orbit\_command, return\_home\ldots \\
+    \cmd{DO\_REPOSITION} & p1 = vel, p2 = 1, p4 = yaw, p5..7 = lat, lon, alt & goto\_mission, change\_speed \\
+    \cmd{DO\_ORBIT} & p1 = radio, p2 = vel, p5..7 = centro & orbit\_command \\
+    \cmd{DO\_CHANGE\_SPEED} & p1 = 1 (suelo), p2 = m/s & change\_speed \\
+    \cmd{DO\_SET\_HOME} & p1 = 0, p5..7 = lat, lon, alt & set\_home \\
+    \cmd{ACTUATOR\_TEST} & p1 = 0..1, p2 = s, p5 = motor & motor\_test \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{VehicleCommandAck: ¿me hizo caso?}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering\scriptsize
+    \begin{tabular}{cl}
+      \toprule
+      \cmd{result} & Significa \\
+      \midrule
+      0 & ACCEPTED: aceptado y ejecutado \\
+      1 & TEMPORARILY\_REJECTED: ahora no \\
+      2 & DENIED: no, nunca \\
+      3 & UNSUPPORTED: no lo conozco \\
+      4 & FAILED: lo intenté y falló \\
+      5 & IN\_PROGRESS: trabajando \\
+      6 & CANCELLED \\
+      \bottomrule
+    \end{tabular}
+    \column{0.47\textwidth}\small
+    Topic: \cmd{/fmu/out/vehicle\_command\_ack}. Trae \cmd{command} (cuál) y \cmd{result}.
+    \vspace{0.3em}
+    \begin{terminal}{goto\_mission}
+PX4 rechazó el comando 400\\
+\ \ (result=1)
+    \end{terminal}
+    \footnotesize 400 = armar; 1 = ``ahora no'' (p. ej. falló un preflight check).
+  \end{columns}
+\end{frame}
+
+\begin{frame}{OffboardControlMode: el heartbeat de offboard}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering\scriptsize
+    \begin{tabular}{ll}
+      \toprule
+      Campo (bool) & Controlar\ldots \\
+      \midrule
+      \cmd{position} & posición \\
+      \cmd{velocity} & velocidad \\
+      \cmd{acceleration} & aceleración \\
+      \cmd{attitude} & actitud \\
+      \cmd{body\_rate} & velocidad de giro \\
+      \cmd{thrust\_and\_torque} & empuje y par \\
+      \cmd{direct\_actuator} & los motores directo \\
+      \bottomrule
+    \end{tabular}
+    \column{0.47\textwidth}\small
+    Topic: \cmd{/fmu/in/offboard\_control\_mode}.
+    \begin{itemize}
+      \item Dice \textbf{qué tipo} de setpoint vamos a mandar.
+      \item Hay que publicarlo \textbf{continuamente} (\textgreater2 Hz): si deja de llegar, PX4 sale de
+        offboard (failsafe).
+      \item Los ejemplos solo usan \cmd{position}, \cmd{velocity} y \cmd{acceleration}.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{TrajectorySetpoint: a dónde ir}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\centering\scriptsize
+    \begin{tabular}{lll}
+      \toprule
+      Campo & Unidad & \\
+      \midrule
+      \cmd{position[3]} & m & NED \\
+      \cmd{velocity[3]} & m/s & NED \\
+      \cmd{acceleration[3]} & m/s$^2$ & NED \\
+      \cmd{yaw} & rad & $-\pi..\pi$ \\
+      \cmd{yawspeed} & rad/s & \\
+      \bottomrule
+    \end{tabular}
+    \column{0.47\textwidth}\small
+    Topic: \cmd{/fmu/in/trajectory\_setpoint}.
+    \vspace{0.3em}
+
+    \textbf{Lo que va en NaN, PX4 no lo usa}:
+    \begin{itemize}
+      \item posición + NaN en velocidad = ir al punto;
+      \item NaN en posición + velocidad = ``joystick'' (\cmd{velocity\_control});
+      \item yaw NaN + \cmd{yawspeed} = girar a cierta velocidad.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{NaN: ``no lo uses''}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \begin{lstlisting}[style=cpp,caption={Como en goto\_mission y velocity\_control}]
+#include <limits>
+constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+
+msg.position = {kNaN, kNaN, kNaN};   // no controles posición
+msg.velocity = {2.0f, 0.0f, 0.0f};   // 2 m/s al norte
+msg.yaw = kNaN;                      // no fijes el yaw
+    \end{lstlisting}
+    \column{0.42\textwidth}\small
+    \begin{itemize}
+      \item NaN (\emph{Not a Number}) es un valor especial de \cmd{float}: el resultado de $0/0$.
+      \item Cualquier comparación con NaN da \cmd{false}, \textbf{incluso} \cmd{x == x}.
+      \item Para preguntar: \cmd{std::isnan(x)} o \cmd{std::isfinite(x)}.
+    \end{itemize}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{std\_msgs: mensajes que no son de PX4}
+  \small Para pasarse un valor entre nodos nuestros no hace falta \cmd{px4\_msgs}:
+  \begin{lstlisting}[language=yaml,caption={ros2 interface show std\_msgs/msg/Float32}]
+float32 data
+  \end{lstlisting}
+  \begin{itemize}
+    \item \cmd{battery\_publisher} publica el porcentaje de batería en \cmd{/vespo/battery\_percent} como
+      \cmd{std\_msgs/Float32}.
+    \item Cualquier nodo lo lee sin saber nada de PX4.
+    \item Hay \cmd{Bool}, \cmd{Int32}, \cmd{String}, \cmd{Float64}\ldots y en \cmd{geometry\_msgs},
+      \cmd{sensor\_msgs} mensajes más grandes (poses, imágenes, scans).
+  \end{itemize}
+\end{frame}

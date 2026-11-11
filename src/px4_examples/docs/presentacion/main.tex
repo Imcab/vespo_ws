@@ -1,0 +1,74 @@
+% =============================================================================
+% Parte 2 — PX4 + ROS 2 con px4_examples, paso a paso
+% Vespo UAV
+%
+% Para presentar después de la Parte 1 (parte1.tex). Lo técnico a detalle
+% (cada mensaje campo por campo, el código completo) está en referencia.tex.
+%
+% Compilar:  latexmk -pdf main.tex
+% =============================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+\input{estilo}
+
+\title[PX4 + ROS 2 paso a paso]{PX4 + ROS 2 con px4\_examples}
+\subtitle{Paso a paso: de instalar a volar el x500 con tu propio nodo (Parte 2)}
+\author[Imad Cabrera]{Imad Jared Cabrera Trejo}
+\institute[Vespo UAV]{Vespo UAV Drones Autónomos}
+\date{11 de noviembre de 2026}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.center) {\includegraphics[width=\paperwidth]{x500_volando}};
+    \fill[white,opacity=0.8] ([yshift=-1.5cm]current page.north west) rectangle ([yshift=-4.5cm]current page.north east);
+    \node[font=\LARGE\bfseries] at ([yshift=-2.4cm]current page.north) {PX4 + ROS 2 con px4\_examples};
+    \node[font=\normalsize] at ([yshift=-3.2cm]current page.north) {Paso a paso: de instalar a volar el x500 con tu propio nodo (Parte 2)};
+    \node[font=\scriptsize] at ([yshift=-3.9cm]current page.north) {Imad Jared Cabrera Trejo · Vespo UAV · 11 de noviembre de 2026};
+    \node[anchor=south east] at ([xshift=-0.3cm,yshift=0.3cm]current page.south east) {\includegraphics[height=1.1cm]{vespo_logo}};
+  \end{tikzpicture}
+\end{frame}
+
+\begin{frame}{Hoy}
+  \begin{columns}[c]
+    \column{0.55\textwidth}
+    \begin{enumerate}\small
+      \item \textbf{Instalar} todo con \cmd{vespo}, desde cero.
+      \item \textbf{Repaso} del x500 y de PX4 en 4 láminas.
+      \item Cómo \textbf{habla} ROS 2 con PX4.
+      \item \cmd{shared\_ptr}: lo único de C++ que hoy hace falta.
+      \item \textbf{Escuchar} al dron.
+      \item \textbf{Volar en offboard}: \cmd{square\_mission} cuadro por cuadro.
+      \item \textbf{Volar con comandos}: \cmd{goto\_mission} y \cmd{return\_home}.
+      \item \textbf{Tu primer reto}: la estrella del show.
+      \item \textbf{Cuando algo no jala}.
+    \end{enumerate}
+    \column{0.42\textwidth}\centering
+    \dronarriba{0.8\linewidth}
+  \end{columns}
+\end{frame}
+
+\input{parte2/01_instalar}
+\input{parte2/02_x500}
+\input{parte2/03_ros_px4}
+\input{parte2/04_sharedptr}
+\input{parte2/05_escuchar}
+\input{parte2/06_offboard}
+\input{parte2/07_comandos}
+\input{parte2/08_reto}
+\input{parte2/09_problemas}
+
+\begin{frame}{Créditos de las imágenes}
+  \small
+  \begin{itemize}
+    \item \textbf{Capturas de QGroundControl y Gazebo, fotos y el diagrama de uXRCE-DDS}: documentación de PX4
+      (\cmd{docs.px4.io}), © PX4 / Dronecode y colaboradores, licencia \textbf{CC BY 4.0}
+      (\cmd{creativecommons.org/licenses/by/4.0}). Solo se redimensionaron.
+    \item \textbf{Renders del x500 y de los mundos}: propios, con Gazebo Harmonic sobre el modelo \cmd{x500} de
+      PX4 (\cmd{tools/renders\_x500.py}).
+  \end{itemize}
+  \vspace{0.6em}
+  \centering\includegraphics[height=1.4cm]{vespo_logo}
+\end{frame}
+
+\end{document}
