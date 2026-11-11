@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# @name Gazebo x500 cam abajo (ligera)
+#
+# @type Quadrotor
+#
+# El x500 de PX4 con la cámara ligera de este modelo (ver model.sdf). El
+# nombre del archivo (<SYS_AUTOSTART>_gz_<modelo>) es como PX4 lo encuentra;
+# `vespo simulate` lo enlaza al build de PX4 antes de arrancar.
+#
+
+PX4_SIM_MODEL=${PX4_SIM_MODEL:=x500_cam_abajo}
+
+. ${R}etc/init.d-posix/airframes/4001_gz_x500

@@ -30,3 +30,7 @@ resources/RC-HL-2025-Rules.pdf
 resources/Simulador_Voces_de_Copal.html
 resources/mysqlsampledatabase.*
 resources/xampp-*.run
+
+# Soluciones de los retos del X500: solo en la máquina de quien las escribe,
+# para que el equipo resuelva x500_retos sin verlas.
+src/x500_soluciones/

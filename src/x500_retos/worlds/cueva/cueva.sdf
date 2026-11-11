@@ -1,0 +1,360 @@
+<?xml version="1.0" ?>
+<!-- Cueva que atraviesa una montaña (misión 5: cruzarla con el lidar 2D).
+     Correr con el modelo x500_lidar_2d. El túnel mide ~73 m, 5 m de ancho
+     y 4.0 m de alto, con dos angosturas de 3 m y una columna de roca a medio
+     camino que deja un solo paso (por la izquierda). La boca sur está 10 m al
+     norte del despegue; la plataforma de salida en NED norte 84.0, este -1.0.
+
+     Generado por tools/build_worlds.py: los cambios a mano se pierden al
+     regenerar. Se corre con  vespo up --sim --world cueva
+-->
+<sdf version="1.9">
+  <world name="cueva">
+
+
+    <!-- Sin <plugin> a propósito: si el mundo declara alguno, Gazebo ignora el
+         server.config de PX4 (física, IMU, barómetro, GPS, cámaras). -->
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type="adiabatic"/>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>47.397971057728974</latitude_deg>
+      <longitude_deg>8.546163739800146</longitude_deg>
+      <elevation>0</elevation>
+    </spherical_coordinates>
+
+    <scene><ambient>0.18 0.18 0.2 1</ambient><background>0.62 0.75 0.92 1</background><sky></sky><shadows>true</shadows><grid>false</grid></scene>
+
+<light type="directional" name="sol"><cast_shadows>true</cast_shadows><pose>0.000 0.000 60.000 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.96 0.88 1</diffuse><specular>0.25 0.25 0.25 1</specular><intensity>1.2</intensity><direction>-0.4 0.45 -0.8</direction></light>
+<model name="escena"><static>true</static>
+<link name="suelo"><visual name="v_1"><geometry><mesh><uri>model://x500_mallas/cueva/suelo.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/tierra_pasto/tierra_pasto_color.jpg</albedo_map><normal_map>model://x500_texturas/tierra_pasto/tierra_pasto_normal.jpg</normal_map><roughness_map>model://x500_texturas/tierra_pasto/tierra_pasto_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<collision name="c_2"><pose>0.000 0.000 -0.500 0.0000 0.0000 0.0000</pose><geometry><box><size>300.000 300.000 1.000</size></box></geometry></collision>
+<visual name="v_3"><pose>0.000 0.000 0.030 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>1.350</radius><length>0.020</length></cylinder></geometry><material><ambient>1.0 0.85 0.1 1</ambient><diffuse>1.0 0.85 0.1 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_4"><pose>0.000 0.000 0.035 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>1.200</radius><length>0.020</length></cylinder></geometry><material><ambient>0.12 0.12 0.14 1</ambient><diffuse>0.12 0.12 0.14 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_5"><pose>-0.400 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.160 1.100 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_6"><pose>0.400 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.160 1.100 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_7"><pose>0.000 0.000 0.050 0.0000 0.0000 0.0000</pose><geometry><box><size>0.800 0.160 0.010</size></box></geometry><material><ambient>0.95 0.95 0.95 1</ambient><diffuse>0.95 0.95 0.95 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_8"><pose>-0.960 84.000 0.020 0.0000 0.0000 0.0000</pose><geometry><box><size>2.800 2.800 0.020</size></box></geometry><material><ambient>0.92 0.92 0.92 1</ambient><diffuse>0.92 0.92 0.92 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_9"><pose>-0.960 84.000 0.030 0.0000 0.0000 0.0000</pose><geometry><box><size>2.500 2.500 0.020</size></box></geometry><material><ambient>0.95 0.45 0.08 1</ambient><diffuse>0.95 0.45 0.08 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>0.142 0.068 0.012 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_10"><pose>-0.960 84.000 0.045 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.850</radius><length>0.010</length></cylinder></geometry><material><ambient>0.92 0.92 0.92 1</ambient><diffuse>0.92 0.92 0.92 1</diffuse><specular>0.2 0.2 0.2 1</specular><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual></link>
+<link name="cueva"><collision name="c_1"><pose>-2.750 9.550 2.000 0.0000 0.0000 1.5707</pose><geometry><box><size>1.166 0.500 4.000</size></box></geometry></collision>
+<collision name="c_2"><pose>-2.761 10.552 2.000 0.0000 0.0000 1.5896</pose><geometry><box><size>1.437 0.500 4.000</size></box></geometry></collision>
+<collision name="c_3"><pose>-2.796 11.613 2.000 0.0000 0.0000 1.6199</pose><geometry><box><size>1.287 0.500 4.000</size></box></geometry></collision>
+<collision name="c_4"><pose>-2.846 12.585 2.000 0.0000 0.0000 1.6255</pose><geometry><box><size>1.259 0.500 4.000</size></box></geometry></collision>
+<collision name="c_5"><pose>-2.885 13.571 2.000 0.0000 0.0000 1.5964</pose><geometry><box><size>1.314 0.500 4.000</size></box></geometry></collision>
+<collision name="c_6"><pose>-2.878 14.634 2.000 0.0000 0.0000 1.5350</pose><geometry><box><size>1.414 0.500 4.000</size></box></geometry></collision>
+<collision name="c_7"><pose>-2.789 15.797 2.000 0.0000 0.0000 1.4575</pose><geometry><box><size>1.519 0.500 4.000</size></box></geometry></collision>
+<collision name="c_8"><pose>-2.629 16.932 2.000 0.0000 0.0000 1.4005</pose><geometry><box><size>1.375 0.500 4.000</size></box></geometry></collision>
+<collision name="c_9"><pose>-2.427 17.998 2.000 0.0000 0.0000 1.3654</pose><geometry><box><size>1.395 0.500 4.000</size></box></geometry></collision>
+<collision name="c_10"><pose>-2.181 19.081 2.000 0.0000 0.0000 1.3313</pose><geometry><box><size>1.426 0.500 4.000</size></box></geometry></collision>
+<collision name="c_11"><pose>-1.892 20.182 2.000 0.0000 0.0000 1.2970</pose><geometry><box><size>1.452 0.500 4.000</size></box></geometry></collision>
+<collision name="c_12"><pose>-1.558 21.296 2.000 0.0000 0.0000 1.2619</pose><geometry><box><size>1.473 0.500 4.000</size></box></geometry></collision>
+<collision name="c_13"><pose>-1.178 22.413 2.000 0.0000 0.0000 1.2243</pose><geometry><box><size>1.488 0.500 4.000</size></box></geometry></collision>
+<collision name="c_14"><pose>-0.688 23.507 2.000 0.0000 0.0000 1.0766</pose><geometry><box><size>1.515 0.500 4.000</size></box></geometry></collision>
+<collision name="c_15"><pose>-0.035 24.503 2.000 0.0000 0.0000 0.9017</pose><geometry><box><size>1.476 0.500 4.000</size></box></geometry></collision>
+<collision name="c_16"><pose>0.735 25.376 2.000 0.0000 0.0000 0.7928</pose><geometry><box><size>1.457 0.500 4.000</size></box></geometry></collision>
+<collision name="c_17"><pose>1.524 26.189 2.000 0.0000 0.0000 0.8093</pose><geometry><box><size>1.408 0.500 4.000</size></box></geometry></collision>
+<collision name="c_18"><pose>2.214 27.019 2.000 0.0000 0.0000 0.9475</pose><geometry><box><size>1.357 0.500 4.000</size></box></geometry></collision>
+<collision name="c_19"><pose>2.736 27.917 2.000 0.0000 0.0000 1.1437</pose><geometry><box><size>1.331 0.500 4.000</size></box></geometry></collision>
+<collision name="c_20"><pose>3.080 28.872 2.000 0.0000 0.0000 1.3086</pose><geometry><box><size>1.306 0.500 4.000</size></box></geometry></collision>
+<collision name="c_21"><pose>3.293 29.817 2.000 0.0000 0.0000 1.3939</pose><geometry><box><size>1.232 0.500 4.000</size></box></geometry></collision>
+<collision name="c_22"><pose>3.452 30.678 2.000 0.0000 0.0000 1.3818</pose><geometry><box><size>1.121 0.500 4.000</size></box></geometry></collision>
+<collision name="c_23"><pose>3.698 31.555 2.000 0.0000 0.0000 1.2283</pose><geometry><box><size>1.306 0.500 4.000</size></box></geometry></collision>
+<collision name="c_24"><pose>4.046 32.491 2.000 0.0000 0.0000 1.2008</pose><geometry><box><size>1.292 0.500 4.000</size></box></geometry></collision>
+<collision name="c_25"><pose>4.383 33.405 2.000 0.0000 0.0000 1.2341</pose><geometry><box><size>1.256 0.500 4.000</size></box></geometry></collision>
+<collision name="c_26"><pose>4.674 34.295 2.000 0.0000 0.0000 1.2762</pose><geometry><box><size>1.216 0.500 4.000</size></box></geometry></collision>
+<collision name="c_27"><pose>4.913 35.158 2.000 0.0000 0.0000 1.3277</pose><geometry><box><size>1.175 0.500 4.000</size></box></geometry></collision>
+<collision name="c_28"><pose>5.088 35.994 2.000 0.0000 0.0000 1.4022</pose><geometry><box><size>1.134 0.500 4.000</size></box></geometry></collision>
+<collision name="c_29"><pose>5.168 36.806 2.000 0.0000 0.0000 1.5470</pose><geometry><box><size>1.103 0.500 4.000</size></box></geometry></collision>
+<collision name="c_30"><pose>5.136 37.623 2.000 0.0000 0.0000 1.6698</pose><geometry><box><size>1.135 0.500 4.000</size></box></geometry></collision>
+<collision name="c_31"><pose>5.020 38.457 2.000 0.0000 0.0000 1.7464</pose><geometry><box><size>1.151 0.500 4.000</size></box></geometry></collision>
+<collision name="c_32"><pose>4.857 39.290 2.000 0.0000 0.0000 1.7812</pose><geometry><box><size>1.147 0.500 4.000</size></box></geometry></collision>
+<collision name="c_33"><pose>4.683 40.113 2.000 0.0000 0.0000 1.7789</pose><geometry><box><size>1.135 0.500 4.000</size></box></geometry></collision>
+<collision name="c_34"><pose>4.521 40.925 2.000 0.0000 0.0000 1.7568</pose><geometry><box><size>1.122 0.500 4.000</size></box></geometry></collision>
+<collision name="c_35"><pose>4.376 41.728 2.000 0.0000 0.0000 1.7402</pose><geometry><box><size>1.110 0.500 4.000</size></box></geometry></collision>
+<collision name="c_36"><pose>4.240 42.508 2.000 0.0000 0.0000 1.7482</pose><geometry><box><size>1.076 0.500 4.000</size></box></geometry></collision>
+<collision name="c_37"><pose>4.088 43.227 2.000 0.0000 0.0000 1.8116</pose><geometry><box><size>0.994 0.500 4.000</size></box></geometry></collision>
+<collision name="c_38"><pose>3.857 43.925 2.000 0.0000 0.0000 1.9627</pose><geometry><box><size>1.080 0.500 4.000</size></box></geometry></collision>
+<collision name="c_39"><pose>3.483 44.663 2.000 0.0000 0.0000 2.1087</pose><geometry><box><size>1.179 0.500 4.000</size></box></geometry></collision>
+<collision name="c_40"><pose>2.970 45.428 2.000 0.0000 0.0000 2.2079</pose><geometry><box><size>1.265 0.500 4.000</size></box></geometry></collision>
+<collision name="c_41"><pose>2.366 46.228 2.000 0.0000 0.0000 2.2265</pose><geometry><box><size>1.341 0.500 4.000</size></box></geometry></collision>
+<collision name="c_42"><pose>1.715 47.082 2.000 0.0000 0.0000 2.2180</pose><geometry><box><size>1.406 0.500 4.000</size></box></geometry></collision>
+<collision name="c_43"><pose>1.056 47.985 2.000 0.0000 0.0000 2.1848</pose><geometry><box><size>1.430 0.500 4.000</size></box></geometry></collision>
+<collision name="c_44"><pose>0.453 48.847 2.000 0.0000 0.0000 2.1773</pose><geometry><box><size>1.274 0.500 4.000</size></box></geometry></collision>
+<collision name="c_45"><pose>-0.107 49.656 2.000 0.0000 0.0000 2.1746</pose><geometry><box><size>1.295 0.500 4.000</size></box></geometry></collision>
+<collision name="c_46"><pose>-0.617 50.548 2.000 0.0000 0.0000 2.0111</pose><geometry><box><size>1.366 0.500 4.000</size></box></geometry></collision>
+<collision name="c_47"><pose>-1.034 51.563 2.000 0.0000 0.0000 1.9134</pose><geometry><box><size>1.431 0.500 4.000</size></box></geometry></collision>
+<collision name="c_48"><pose>-1.427 52.631 2.000 0.0000 0.0000 1.9329</pose><geometry><box><size>1.445 0.500 4.000</size></box></geometry></collision>
+<collision name="c_49"><pose>-1.889 53.675 2.000 0.0000 0.0000 2.0426</pose><geometry><box><size>1.442 0.500 4.000</size></box></geometry></collision>
+<collision name="c_50"><pose>-2.475 54.670 2.000 0.0000 0.0000 2.1624</pose><geometry><box><size>1.470 0.500 4.000</size></box></geometry></collision>
+<collision name="c_51"><pose>-3.162 55.611 2.000 0.0000 0.0000 2.2402</pose><geometry><box><size>1.463 0.500 4.000</size></box></geometry></collision>
+<collision name="c_52"><pose>-3.876 56.545 2.000 0.0000 0.0000 2.2080</pose><geometry><box><size>1.489 0.500 4.000</size></box></geometry></collision>
+<collision name="c_53"><pose>-4.499 57.553 2.000 0.0000 0.0000 2.0391</pose><geometry><box><size>1.489 0.500 4.000</size></box></geometry></collision>
+<collision name="c_54"><pose>-4.940 58.656 2.000 0.0000 0.0000 1.8636</pose><geometry><box><size>1.496 0.500 4.000</size></box></geometry></collision>
+<collision name="c_55"><pose>-5.254 59.815 2.000 0.0000 0.0000 1.8083</pose><geometry><box><size>1.506 0.500 4.000</size></box></geometry></collision>
+<collision name="c_56"><pose>-5.503 60.997 2.000 0.0000 0.0000 1.7487</pose><geometry><box><size>1.512 0.500 4.000</size></box></geometry></collision>
+<collision name="c_57"><pose>-5.677 62.206 2.000 0.0000 0.0000 1.6795</pose><geometry><box><size>1.531 0.500 4.000</size></box></geometry></collision>
+<collision name="c_58"><pose>-5.753 63.463 2.000 0.0000 0.0000 1.5854</pose><geometry><box><size>1.591 0.500 4.000</size></box></geometry></collision>
+<collision name="c_59"><pose>-5.714 64.729 2.000 0.0000 0.0000 1.4916</pose><geometry><box><size>1.545 0.500 4.000</size></box></geometry></collision>
+<collision name="c_60"><pose>-5.578 65.935 2.000 0.0000 0.0000 1.4241</pose><geometry><box><size>1.485 0.500 4.000</size></box></geometry></collision>
+<collision name="c_61"><pose>-5.386 67.072 2.000 0.0000 0.0000 1.3813</pose><geometry><box><size>1.421 0.500 4.000</size></box></geometry></collision>
+<collision name="c_62"><pose>-5.171 68.135 2.000 0.0000 0.0000 1.3617</pose><geometry><box><size>1.347 0.500 4.000</size></box></geometry></collision>
+<collision name="c_63"><pose>-4.965 69.115 2.000 0.0000 0.0000 1.3653</pose><geometry><box><size>1.257 0.500 4.000</size></box></geometry></collision>
+<collision name="c_64"><pose>-4.790 70.018 2.000 0.0000 0.0000 1.3945</pose><geometry><box><size>1.182 0.500 4.000</size></box></geometry></collision>
+<collision name="c_65"><pose>-4.617 70.996 2.000 0.0000 0.0000 1.3960</pose><geometry><box><size>1.405 0.500 4.000</size></box></geometry></collision>
+<collision name="c_66"><pose>-4.419 72.025 2.000 0.0000 0.0000 1.3639</pose><geometry><box><size>1.291 0.500 4.000</size></box></geometry></collision>
+<collision name="c_67"><pose>-4.223 72.941 2.000 0.0000 0.0000 1.3573</pose><geometry><box><size>1.182 0.500 4.000</size></box></geometry></collision>
+<collision name="c_68"><pose>-4.050 73.787 2.000 0.0000 0.0000 1.3808</pose><geometry><box><size>1.145 0.500 4.000</size></box></geometry></collision>
+<collision name="c_69"><pose>-3.905 74.651 2.000 0.0000 0.0000 1.4269</pose><geometry><box><size>1.207 0.500 4.000</size></box></geometry></collision>
+<collision name="c_70"><pose>-3.792 75.642 2.000 0.0000 0.0000 1.4822</pose><geometry><box><size>1.388 0.500 4.000</size></box></geometry></collision>
+<collision name="c_71"><pose>-3.726 76.587 2.000 0.0000 0.0000 1.5256</pose><geometry><box><size>1.107 0.500 4.000</size></box></geometry></collision>
+<collision name="c_72"><pose>2.750 9.567 2.000 0.0000 0.0000 1.5709</pose><geometry><box><size>1.200 0.500 4.000</size></box></geometry></collision>
+<collision name="c_73"><pose>2.738 10.668 2.000 0.0000 0.0000 1.5899</pose><geometry><box><size>1.603 0.500 4.000</size></box></geometry></collision>
+<collision name="c_74"><pose>2.698 11.866 2.000 0.0000 0.0000 1.6196</pose><geometry><box><size>1.395 0.500 4.000</size></box></geometry></collision>
+<collision name="c_75"><pose>2.647 12.862 2.000 0.0000 0.0000 1.6257</pose><geometry><box><size>1.200 0.500 4.000</size></box></geometry></collision>
+<collision name="c_76"><pose>2.612 13.691 2.000 0.0000 0.0000 1.5976</pose><geometry><box><size>1.059 0.500 4.000</size></box></geometry></collision>
+<collision name="c_77"><pose>2.614 14.428 2.000 0.0000 0.0000 1.5360</pose><geometry><box><size>1.015 0.500 4.000</size></box></geometry></collision>
+<collision name="c_78"><pose>2.674 15.192 2.000 0.0000 0.0000 1.4560</pose><geometry><box><size>1.118 0.500 4.000</size></box></geometry></collision>
+<collision name="c_79"><pose>2.793 16.016 2.000 0.0000 0.0000 1.3997</pose><geometry><box><size>1.148 0.500 4.000</size></box></geometry></collision>
+<collision name="c_80"><pose>2.957 16.877 2.000 0.0000 0.0000 1.3654</pose><geometry><box><size>1.206 0.500 4.000</size></box></geometry></collision>
+<collision name="c_81"><pose>3.161 17.776 2.000 0.0000 0.0000 1.3313</pose><geometry><box><size>1.239 0.500 4.000</size></box></geometry></collision>
+<collision name="c_82"><pose>3.402 18.695 2.000 0.0000 0.0000 1.2971</pose><geometry><box><size>1.262 0.500 4.000</size></box></geometry></collision>
+<collision name="c_83"><pose>3.681 19.623 2.000 0.0000 0.0000 1.2619</pose><geometry><box><size>1.276 0.500 4.000</size></box></geometry></collision>
+<collision name="c_84"><pose>3.994 20.549 2.000 0.0000 0.0000 1.2264</pose><geometry><box><size>1.281 0.500 4.000</size></box></geometry></collision>
+<collision name="c_85"><pose>4.280 21.485 2.000 0.0000 0.0000 1.3229</pose><geometry><box><size>1.278 0.500 4.000</size></box></geometry></collision>
+<collision name="c_86"><pose>4.453 22.372 2.000 0.0000 0.0000 1.4425</pose><geometry><box><size>1.135 0.500 4.000</size></box></geometry></collision>
+<collision name="c_87"><pose>4.589 23.249 2.000 0.0000 0.0000 1.3951</pose><geometry><box><size>1.240 0.500 4.000</size></box></geometry></collision>
+<collision name="c_88"><pose>4.824 24.186 2.000 0.0000 0.0000 1.2587</pose><geometry><box><size>1.296 0.500 4.000</size></box></geometry></collision>
+<collision name="c_89"><pose>5.227 25.106 2.000 0.0000 0.0000 1.0596</pose><geometry><box><size>1.323 0.500 4.000</size></box></geometry></collision>
+<collision name="c_90"><pose>5.822 25.958 2.000 0.0000 0.0000 0.8662</pose><geometry><box><size>1.366 0.500 4.000</size></box></geometry></collision>
+<collision name="c_91"><pose>6.572 26.753 2.000 0.0000 0.0000 0.7657</pose><geometry><box><size>1.423 0.500 4.000</size></box></geometry></collision>
+<collision name="c_92"><pose>7.383 27.558 2.000 0.0000 0.0000 0.7974</pose><geometry><box><size>1.463 0.500 4.000</size></box></geometry></collision>
+<collision name="c_93"><pose>8.130 28.447 2.000 0.0000 0.0000 0.9453</pose><geometry><box><size>1.464 0.500 4.000</size></box></geometry></collision>
+<collision name="c_94"><pose>8.719 29.445 2.000 0.0000 0.0000 1.1304</pose><geometry><box><size>1.464 0.500 4.000</size></box></geometry></collision>
+<collision name="c_95"><pose>9.176 30.509 2.000 0.0000 0.0000 1.2010</pose><geometry><box><size>1.453 0.500 4.000</size></box></geometry></collision>
+<collision name="c_96"><pose>9.576 31.595 2.000 0.0000 0.0000 1.2343</pose><geometry><box><size>1.463 0.500 4.000</size></box></geometry></collision>
+<collision name="c_97"><pose>9.938 32.705 2.000 0.0000 0.0000 1.2765</pose><geometry><box><size>1.473 0.500 4.000</size></box></geometry></collision>
+<collision name="c_98"><pose>10.251 33.842 2.000 0.0000 0.0000 1.3280</pose><geometry><box><size>1.485 0.500 4.000</size></box></geometry></collision>
+<collision name="c_99"><pose>10.507 35.006 2.000 0.0000 0.0000 1.3801</pose><geometry><box><size>1.499 0.500 4.000</size></box></geometry></collision>
+<collision name="c_100"><pose>10.722 36.194 2.000 0.0000 0.0000 1.4033</pose><geometry><box><size>1.514 0.500 4.000</size></box></geometry></collision>
+<collision name="c_101"><pose>10.905 37.386 2.000 0.0000 0.0000 1.4334</pose><geometry><box><size>1.498 0.500 4.000</size></box></geometry></collision>
+<collision name="c_102"><pose>11.041 38.581 2.000 0.0000 0.0000 1.4815</pose><geometry><box><size>1.508 0.500 4.000</size></box></geometry></collision>
+<collision name="c_103"><pose>11.102 39.792 2.000 0.0000 0.0000 1.5596</pose><geometry><box><size>1.518 0.500 4.000</size></box></geometry></collision>
+<collision name="c_104"><pose>11.052 41.010 2.000 0.0000 0.0000 1.6635</pose><geometry><box><size>1.523 0.500 4.000</size></box></geometry></collision>
+<collision name="c_105"><pose>10.867 42.218 2.000 0.0000 0.0000 1.7814</pose><geometry><box><size>1.526 0.500 4.000</size></box></geometry></collision>
+<collision name="c_106"><pose>10.542 43.398 2.000 0.0000 0.0000 1.8980</pose><geometry><box><size>1.526 0.500 4.000</size></box></geometry></collision>
+<collision name="c_107"><pose>10.087 44.544 2.000 0.0000 0.0000 1.9988</pose><geometry><box><size>1.543 0.500 4.000</size></box></geometry></collision>
+<collision name="c_108"><pose>9.498 45.682 2.000 0.0000 0.0000 2.0952</pose><geometry><box><size>1.623 0.500 4.000</size></box></geometry></collision>
+<collision name="c_109"><pose>8.805 46.772 2.000 0.0000 0.0000 2.1806</pose><geometry><box><size>1.561 0.500 4.000</size></box></geometry></collision>
+<collision name="c_110"><pose>8.089 47.766 2.000 0.0000 0.0000 2.2107</pose><geometry><box><size>1.489 0.500 4.000</size></box></geometry></collision>
+<collision name="c_111"><pose>7.397 48.695 2.000 0.0000 0.0000 2.2115</pose><geometry><box><size>1.427 0.500 4.000</size></box></geometry></collision>
+<collision name="c_112"><pose>6.736 49.568 2.000 0.0000 0.0000 2.2265</pose><geometry><box><size>1.363 0.500 4.000</size></box></geometry></collision>
+<collision name="c_113"><pose>6.113 50.385 2.000 0.0000 0.0000 2.2184</pose><geometry><box><size>1.292 0.500 4.000</size></box></geometry></collision>
+<collision name="c_114"><pose>5.542 51.167 2.000 0.0000 0.0000 2.1842</pose><geometry><box><size>1.245 0.500 4.000</size></box></geometry></collision>
+<collision name="c_115"><pose>4.958 52.001 2.000 0.0000 0.0000 2.1778</pose><geometry><box><size>1.392 0.500 4.000</size></box></geometry></collision>
+<collision name="c_116"><pose>4.317 52.877 2.000 0.0000 0.0000 2.2281</pose><geometry><box><size>1.380 0.500 4.000</size></box></geometry></collision>
+<collision name="c_117"><pose>3.596 53.656 2.000 0.0000 0.0000 2.4091</pose><geometry><box><size>1.351 0.500 4.000</size></box></geometry></collision>
+<collision name="c_118"><pose>2.789 54.315 2.000 0.0000 0.0000 2.5064</pose><geometry><box><size>1.335 0.500 4.000</size></box></geometry></collision>
+<collision name="c_119"><pose>1.998 54.940 2.000 0.0000 0.0000 2.4364</pose><geometry><box><size>1.283 0.500 4.000</size></box></geometry></collision>
+<collision name="c_120"><pose>1.353 55.628 2.000 0.0000 0.0000 2.2045</pose><geometry><box><size>1.215 0.500 4.000</size></box></geometry></collision>
+<collision name="c_121"><pose>0.941 56.421 2.000 0.0000 0.0000 1.8903</pose><geometry><box><size>1.194 0.500 4.000</size></box></geometry></collision>
+<collision name="c_122"><pose>0.745 57.337 2.000 0.0000 0.0000 1.6845</pose><geometry><box><size>1.290 0.500 4.000</size></box></geometry></collision>
+<collision name="c_123"><pose>0.655 58.330 2.000 0.0000 0.0000 1.6383</pose><geometry><box><size>1.305 0.500 4.000</size></box></geometry></collision>
+<collision name="c_124"><pose>0.539 59.304 2.000 0.0000 0.0000 1.7417</pose><geometry><box><size>1.259 0.500 4.000</size></box></geometry></collision>
+<collision name="c_125"><pose>0.327 60.221 2.000 0.0000 0.0000 1.8563</pose><geometry><box><size>1.227 0.500 4.000</size></box></geometry></collision>
+<collision name="c_126"><pose>0.091 61.104 2.000 0.0000 0.0000 1.8085</pose><geometry><box><size>1.200 0.500 4.000</size></box></geometry></collision>
+<collision name="c_127"><pose>-0.092 61.965 2.000 0.0000 0.0000 1.7491</pose><geometry><box><size>1.161 0.500 4.000</size></box></geometry></collision>
+<collision name="c_128"><pose>-0.212 62.785 2.000 0.0000 0.0000 1.6812</pose><geometry><box><size>1.098 0.500 4.000</size></box></geometry></collision>
+<collision name="c_129"><pose>-0.261 63.546 2.000 0.0000 0.0000 1.5850</pose><geometry><box><size>1.027 0.500 4.000</size></box></geometry></collision>
+<collision name="c_130"><pose>-0.234 64.309 2.000 0.0000 0.0000 1.4900</pose><geometry><box><size>1.102 0.500 4.000</size></box></geometry></collision>
+<collision name="c_131"><pose>-0.137 65.146 2.000 0.0000 0.0000 1.4232</pose><geometry><box><size>1.184 0.500 4.000</size></box></geometry></collision>
+<collision name="c_132"><pose>0.018 66.051 2.000 0.0000 0.0000 1.3809</pose><geometry><box><size>1.251 0.500 4.000</size></box></geometry></collision>
+<collision name="c_133"><pose>0.212 67.008 2.000 0.0000 0.0000 1.3616</pose><geometry><box><size>1.303 0.500 4.000</size></box></geometry></collision>
+<collision name="c_134"><pose>0.423 68.010 2.000 0.0000 0.0000 1.3655</pose><geometry><box><size>1.344 0.500 4.000</size></box></geometry></collision>
+<collision name="c_135"><pose>0.621 69.035 2.000 0.0000 0.0000 1.3940</pose><geometry><box><size>1.343 0.500 4.000</size></box></geometry></collision>
+<collision name="c_136"><pose>0.795 70.016 2.000 0.0000 0.0000 1.3968</pose><geometry><box><size>1.249 0.500 4.000</size></box></geometry></collision>
+<collision name="c_137"><pose>0.967 70.912 2.000 0.0000 0.0000 1.3635</pose><geometry><box><size>1.178 0.500 4.000</size></box></geometry></collision>
+<collision name="c_138"><pose>1.156 71.797 2.000 0.0000 0.0000 1.3575</pose><geometry><box><size>1.232 0.500 4.000</size></box></geometry></collision>
+<collision name="c_139"><pose>1.353 72.766 2.000 0.0000 0.0000 1.3814</pose><geometry><box><size>1.345 0.500 4.000</size></box></geometry></collision>
+<collision name="c_140"><pose>1.537 73.869 2.000 0.0000 0.0000 1.4272</pose><geometry><box><size>1.493 0.500 4.000</size></box></geometry></collision>
+<collision name="c_141"><pose>1.683 75.138 2.000 0.0000 0.0000 1.4816</pose><geometry><box><size>1.662 0.500 4.000</size></box></geometry></collision>
+<collision name="c_142"><pose>1.766 76.296 2.000 0.0000 0.0000 1.5244</pose><geometry><box><size>1.261 0.500 4.000</size></box></geometry></collision>
+<collision name="c_143"><pose>0.000 9.117 4.250 0.0000 0.0000 3.1416</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_144"><pose>-0.023 11.220 4.250 0.0000 0.0000 -3.1055</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_145"><pose>-0.125 13.188 4.250 0.0000 0.0000 -3.0965</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_146"><pose>-0.116 14.988 4.250 0.0000 0.0000 3.0677</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_147"><pose>0.163 16.948 4.250 0.0000 0.0000 2.9534</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_148"><pose>0.612 18.930 4.250 0.0000 0.0000 2.8850</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_149"><pose>1.224 20.971 4.250 0.0000 0.0000 2.8146</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_150"><pose>2.000 23.000 4.250 0.0000 0.0000 2.7321</pose><geometry><box><size>6.232 2.200 0.500</size></box></geometry></collision>
+<collision name="c_151"><pose>2.906 24.750 4.250 0.0000 0.0000 2.6099</pose><geometry><box><size>5.095 2.200 0.500</size></box></geometry></collision>
+<collision name="c_152"><pose>4.000 26.500 4.250 0.0000 0.0000 2.5710</pose><geometry><box><size>4.510 2.200 0.500</size></box></geometry></collision>
+<collision name="c_153"><pose>5.094 28.250 4.250 0.0000 0.0000 2.6099</pose><geometry><box><size>5.370 2.200 0.500</size></box></geometry></collision>
+<collision name="c_154"><pose>6.000 30.000 4.250 0.0000 0.0000 2.7291</pose><geometry><box><size>6.395 2.200 0.500</size></box></geometry></collision>
+<collision name="c_155"><pose>6.805 32.000 4.250 0.0000 0.0000 2.7873</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_156"><pose>7.458 34.000 4.250 0.0000 0.0000 2.8717</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_157"><pose>7.889 36.000 4.250 0.0000 0.0000 2.9943</pose><geometry><box><size>6.522 2.200 0.500</size></box></geometry></collision>
+<collision name="c_158"><pose>8.041 38.009 4.250 0.0000 0.0000 3.1315</pose><geometry><box><size>6.893 2.200 0.500</size></box></geometry></collision>
+<collision name="c_159"><pose>7.939 40.052 4.250 0.0000 0.0000 -3.0321</pose><geometry><box><size>7.378 2.200 0.500</size></box></geometry></collision>
+<collision name="c_160"><pose>7.592 42.073 4.250 0.0000 0.0000 -2.9094</pose><geometry><box><size>7.468 2.200 0.500</size></box></geometry></collision>
+<collision name="c_161"><pose>7.000 44.000 4.250 0.0000 0.0000 -2.7678</pose><geometry><box><size>7.077 2.200 0.500</size></box></geometry></collision>
+<collision name="c_162"><pose>6.076 45.787 4.250 0.0000 0.0000 -2.5764</pose><geometry><box><size>6.608 2.200 0.500</size></box></geometry></collision>
+<collision name="c_163"><pose>4.872 47.481 4.250 0.0000 0.0000 -2.4911</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_164"><pose>3.598 49.152 4.250 0.0000 0.0000 -2.5078</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_165"><pose>2.411 50.848 4.250 0.0000 0.0000 -2.5200</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_166"><pose>1.181 52.519 4.250 0.0000 0.0000 -2.5076</pose><geometry><box><size>6.026 2.200 0.500</size></box></geometry></collision>
+<collision name="c_167"><pose>-0.003 54.213 4.250 0.0000 0.0000 -2.5701</pose><geometry><box><size>4.868 2.200 0.500</size></box></geometry></collision>
+<collision name="c_168"><pose>-1.000 56.000 4.250 0.0000 0.0000 -2.7029</pose><geometry><box><size>4.979 2.200 0.500</size></box></geometry></collision>
+<collision name="c_169"><pose>-1.805 57.927 4.250 0.0000 0.0000 -2.7848</pose><geometry><box><size>6.177 2.200 0.500</size></box></geometry></collision>
+<collision name="c_170"><pose>-2.458 59.948 4.250 0.0000 0.0000 -2.8772</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_171"><pose>-2.889 61.991 4.250 0.0000 0.0000 -2.9966</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_172"><pose>-3.015 64.009 4.250 0.0000 0.0000 3.1054</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_173"><pose>-2.781 66.052 4.250 0.0000 0.0000 2.9703</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_174"><pose>-2.373 68.073 4.250 0.0000 0.0000 2.9314</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_175"><pose>-2.000 70.000 4.250 0.0000 0.0000 2.9766</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_176"><pose>-1.630 71.926 4.250 0.0000 0.0000 2.9275</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_177"><pose>-1.259 73.741 4.250 0.0000 0.0000 2.9729</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<collision name="c_178"><pose>-1.000 76.000 4.250 0.0000 0.0000 3.0747</pose><geometry><box><size>6.500 2.200 0.500</size></box></geometry></collision>
+<visual name="v_179"><geometry><mesh><uri>model://x500_mallas/cueva/paredes.obj</uri></mesh></geometry><material><ambient>0.55 0.52 0.48 1</ambient><diffuse>0.55 0.52 0.48 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/roca/roca_color.jpg</albedo_map><normal_map>model://x500_texturas/roca/roca_normal.jpg</normal_map><roughness_map>model://x500_texturas/roca/roca_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_180"><geometry><mesh><uri>model://x500_mallas/cueva/techo.obj</uri></mesh></geometry><material><ambient>0.45 0.43 0.4 1</ambient><diffuse>0.45 0.43 0.4 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/roca/roca_color.jpg</albedo_map><normal_map>model://x500_texturas/roca/roca_normal.jpg</normal_map><roughness_map>model://x500_texturas/roca/roca_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_181"><geometry><mesh><uri>model://x500_mallas/cueva/piso_cueva.obj</uri></mesh></geometry><material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/grava/grava_color.jpg</albedo_map><normal_map>model://x500_texturas/grava/grava_normal.jpg</normal_map><roughness_map>model://x500_texturas/grava/grava_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_182"><geometry><mesh><uri>model://x500_mallas/cueva/columna.obj</uri></mesh></geometry><material><ambient>0.8 0.75 0.7 1</ambient><diffuse>0.8 0.75 0.7 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/roca/roca_color.jpg</albedo_map><normal_map>model://x500_texturas/roca/roca_normal.jpg</normal_map><roughness_map>model://x500_texturas/roca/roca_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<collision name="c_183"><pose>9.073 41.853 2.000 0.0000 0.0000 0.0000</pose><geometry><cylinder><radius>0.850</radius><length>4.000</length></cylinder></geometry></collision>
+<visual name="v_184"><pose>-2.273 13.091 3.000 0.0000 0.0000 -3.0965</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_185"><pose>3.261 20.280 3.000 0.0000 0.0000 2.8146</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_186"><pose>3.609 28.560 3.000 0.0000 0.0000 2.5927</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_187"><pose>9.921 35.112 3.000 0.0000 0.0000 2.9599</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_188"><pose>4.806 42.716 3.000 0.0000 0.0000 -2.8097</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_189"><pose>4.774 51.214 3.000 0.0000 0.0000 -2.5415</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_190"><pose>-2.969 56.298 3.000 0.0000 0.0000 -2.7455</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_191"><pose>-0.841 64.347 3.000 0.0000 0.0000 3.0618</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<visual name="v_192"><pose>-3.634 72.824 3.000 0.0000 0.0000 2.9282</pose><geometry><box><size>0.300 0.180 0.140</size></box></geometry><material><ambient>1.0 0.75 0.4 1</ambient><diffuse>1.0 0.75 0.4 1</diffuse><specular>0.2 0.2 0.2 1</specular><emissive>1.000 0.750 0.400 1</emissive><pbr><metal><roughness>0.6</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+<collision name="c_193"><pose>-18.500 10.500 5.000 0.0000 0.0000 0.0000</pose><geometry><box><size>33.000 1.000 10.000</size></box></geometry></collision>
+<collision name="c_194"><pose>18.500 10.500 5.000 0.0000 0.0000 0.0000</pose><geometry><box><size>33.000 1.000 10.000</size></box></geometry></collision>
+<collision name="c_195"><pose>0.000 10.500 7.000 0.0000 0.0000 0.0000</pose><geometry><box><size>4.000 1.000 6.000</size></box></geometry></collision>
+<collision name="c_196"><pose>-18.980 75.500 5.000 0.0000 0.0000 0.0000</pose><geometry><box><size>32.041 1.000 10.000</size></box></geometry></collision>
+<collision name="c_197"><pose>18.020 75.500 5.000 0.0000 0.0000 0.0000</pose><geometry><box><size>33.959 1.000 10.000</size></box></geometry></collision>
+<collision name="c_198"><pose>-0.960 75.500 7.000 0.0000 0.0000 0.0000</pose><geometry><box><size>4.000 1.000 6.000</size></box></geometry></collision>
+<visual name="v_199"><geometry><mesh><uri>model://x500_mallas/cueva/montana_arriba.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/tierra_pasto/tierra_pasto_color.jpg</albedo_map><normal_map>model://x500_texturas/tierra_pasto/tierra_pasto_normal.jpg</normal_map><roughness_map>model://x500_texturas/tierra_pasto/tierra_pasto_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual>
+<visual name="v_200"><geometry><mesh><uri>model://x500_mallas/cueva/montana_caras.obj</uri></mesh></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.05 0.05 0.05 1</specular><pbr><metal><albedo_map>model://x500_texturas/roca/roca_color.jpg</albedo_map><normal_map>model://x500_texturas/roca/roca_normal.jpg</normal_map><roughness_map>model://x500_texturas/roca/roca_roughness.jpg</roughness_map><metalness>0</metalness></metal></pbr></material></visual></link>
+</model>
+<light type="point" name="lampara_0"><pose>-1.873 13.109 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_1"><pose>2.882 20.409 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_2"><pose>3.950 28.351 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_3"><pose>9.527 35.184 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_4"><pose>5.184 42.846 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_5"><pose>4.444 50.988 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_6"><pose>-2.600 56.453 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_7"><pose>-1.240 64.378 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<light type="point" name="lampara_8"><pose>-3.243 72.739 2.800 0.0000 0.0000 0.0000</pose><diffuse>1.0 0.72 0.4 1</diffuse><specular>0.30 0.22 0.12 1</specular><intensity>1.6</intensity><attenuation><range>9.0</range><constant>0.2</constant><linear>0.05</linear><quadratic>0.01</quadratic></attenuation><cast_shadows>false</cast_shadows></light>
+<include><uri>model://truck_delivery</uri><name>camion_rescate</name><pose>-6.000 -4.000 0.000 0.0000 0.0000 1.5708</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_0</name><pose>5.307 5.450 -0.300 0.0000 0.0000 0.8710</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_1</name><pose>-7.811 5.927 -0.300 0.0000 0.0000 6.1652</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_2</name><pose>5.828 78.156 -0.300 0.0000 0.0000 3.3037</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_3</name><pose>-10.123 77.591 -0.300 0.0000 0.0000 2.1448</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_4</name><pose>10.148 6.568 -0.300 0.0000 0.0000 1.3209</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_5</name><pose>-10.423 7.340 -0.300 0.0000 0.0000 5.2669</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_6</name><pose>13.888 81.182 -0.300 0.0000 0.0000 0.1907</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_7</name><pose>-23.376 8.473 -0.300 0.0000 0.0000 1.3046</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_8</name><pose>15.810 6.470 -0.300 0.0000 0.0000 3.0276</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_9</name><pose>-11.585 79.859 -0.300 0.0000 0.0000 4.0617</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_10</name><pose>25.904 8.845 -0.300 0.0000 0.0000 4.9602</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_11</name><pose>-12.658 80.119 -0.300 0.0000 0.0000 0.5873</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_12</name><pose>9.820 8.684 -0.300 0.0000 0.0000 4.2049</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_13</name><pose>-12.120 6.222 -0.300 0.0000 0.0000 0.7159</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_14</name><pose>10.065 6.336 -0.300 0.0000 0.0000 3.5273</pose></include>
+<include><uri>model://falling_rock_1</uri><name>roca_15</name><pose>-7.951 5.395 -0.300 0.0000 0.0000 6.0337</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_0</name><pose>-28.555 -13.856 0.000 0.0000 0.0000 1.9338</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_1</name><pose>-80.151 122.767 0.000 0.0000 0.0000 5.3654</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_2</name><pose>81.432 27.879 0.000 0.0000 0.0000 5.2120</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_3</name><pose>-82.788 -30.033 0.000 0.0000 0.0000 1.7558</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_4</name><pose>53.561 -26.498 0.000 0.0000 0.0000 1.9052</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_5</name><pose>-105.720 96.863 0.000 0.0000 0.0000 4.3452</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_6</name><pose>-112.079 113.378 0.000 0.0000 0.0000 3.1424</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_7</name><pose>81.851 -16.825 0.000 0.0000 0.0000 1.4642</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_8</name><pose>54.297 86.468 0.000 0.0000 0.0000 2.9797</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_9</name><pose>-89.999 73.990 0.000 0.0000 0.0000 3.1112</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_10</name><pose>-90.296 122.644 0.000 0.0000 0.0000 5.1898</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_11</name><pose>45.324 136.001 0.000 0.0000 0.0000 5.1884</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_12</name><pose>-107.153 3.560 0.000 0.0000 0.0000 4.4496</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_13</name><pose>83.167 0.283 0.000 0.0000 0.0000 4.7746</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_14</name><pose>-114.800 -33.010 0.000 0.0000 0.0000 5.0457</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_15</name><pose>-9.980 85.642 0.000 0.0000 0.0000 2.3037</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_16</name><pose>-17.841 88.888 0.000 0.0000 0.0000 5.4512</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_17</name><pose>9.549 116.071 0.000 0.0000 0.0000 5.4841</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_18</name><pose>37.228 4.374 0.000 0.0000 0.0000 0.9330</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_19</name><pose>-86.685 -46.854 0.000 0.0000 0.0000 3.3354</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_20</name><pose>89.902 90.274 0.000 0.0000 0.0000 5.1748</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_21</name><pose>37.305 89.924 0.000 0.0000 0.0000 0.1500</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_22</name><pose>83.617 132.336 0.000 0.0000 0.0000 4.5682</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_23</name><pose>112.231 -4.812 0.000 0.0000 0.0000 1.1700</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_24</name><pose>-53.529 119.490 0.000 0.0000 0.0000 3.6846</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_25</name><pose>-41.823 124.925 0.000 0.0000 0.0000 3.0761</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_26</name><pose>-28.845 117.024 0.000 0.0000 0.0000 4.5288</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_27</name><pose>-68.564 -27.149 0.000 0.0000 0.0000 1.1347</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_28</name><pose>-112.554 -23.875 0.000 0.0000 0.0000 4.7384</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_29</name><pose>39.973 -47.127 0.000 0.0000 0.0000 5.3617</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_30</name><pose>-82.764 5.814 0.000 0.0000 0.0000 4.4843</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_31</name><pose>-91.556 139.505 0.000 0.0000 0.0000 2.4422</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_32</name><pose>23.697 82.609 0.000 0.0000 0.0000 5.2483</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_33</name><pose>112.965 118.744 0.000 0.0000 0.0000 4.2076</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_34</name><pose>77.267 -54.031 0.000 0.0000 0.0000 2.3388</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_35</name><pose>21.483 128.341 0.000 0.0000 0.0000 0.5342</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_36</name><pose>35.928 -24.598 0.000 0.0000 0.0000 2.2042</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_37</name><pose>54.647 96.741 0.000 0.0000 0.0000 1.0869</pose></include>
+<include><uri>model://pine_tree</uri><name>arbol_41_38</name><pose>-102.787 41.959 0.000 0.0000 0.0000 0.5617</pose></include>
+<include><uri>model://oak_tree</uri><name>arbol_41_39</name><pose>43.607 124.386 0.000 0.0000 0.0000 1.9818</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_0</name><pose>18.125 15.451 10.181 0.0000 0.0000 0.1223</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_1</name><pose>-29.246 26.946 9.641 0.0000 0.0000 5.8347</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_2</name><pose>30.741 53.249 9.551 0.0000 0.0000 5.5184</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_3</name><pose>50.983 19.042 4.212 0.0000 0.0000 5.2229</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_4</name><pose>-10.150 15.728 9.516 0.0000 0.0000 1.9312</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_5</name><pose>-36.577 43.311 9.312 0.0000 0.0000 0.3638</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_6</name><pose>-61.550 25.533 0.804 0.0000 0.0000 5.5139</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_7</name><pose>19.485 45.607 9.981 0.0000 0.0000 5.9468</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_8</name><pose>40.226 14.377 8.478 0.0000 0.0000 0.5379</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_9</name><pose>39.757 54.492 8.791 0.0000 0.0000 3.0520</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_10</name><pose>-20.767 23.018 9.478 0.0000 0.0000 0.4347</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_11</name><pose>59.438 33.522 1.332 0.0000 0.0000 4.7766</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_12</name><pose>-52.943 19.610 3.616 0.0000 0.0000 4.8094</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_13</name><pose>45.174 49.016 6.542 0.0000 0.0000 0.8063</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_14</name><pose>4.710 70.441 10.112 0.0000 0.0000 2.9848</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_15</name><pose>-15.791 46.018 9.405 0.0000 0.0000 3.4528</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_16</name><pose>26.594 16.658 10.377 0.0000 0.0000 1.6646</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_17</name><pose>-35.373 30.785 9.000 0.0000 0.0000 5.4789</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_18</name><pose>-54.627 27.502 3.094 0.0000 0.0000 2.6573</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_19</name><pose>17.639 35.160 9.258 0.0000 0.0000 1.3301</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_20</name><pose>-30.293 68.326 10.003 0.0000 0.0000 3.3868</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_21</name><pose>-42.752 56.289 7.517 0.0000 0.0000 4.5840</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_22</name><pose>-43.758 36.008 7.108 0.0000 0.0000 1.2632</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_23</name><pose>63.638 51.120 0.416 0.0000 0.0000 1.9576</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_24</name><pose>7.403 53.708 9.964 0.0000 0.0000 6.2495</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_25</name><pose>-35.224 15.862 9.794 0.0000 0.0000 4.0812</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_26</name><pose>-37.572 68.689 9.262 0.0000 0.0000 2.7513</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_27</name><pose>48.928 32.251 5.472 0.0000 0.0000 3.2504</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_28</name><pose>53.891 40.613 3.213 0.0000 0.0000 0.7599</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_29</name><pose>7.978 29.239 10.202 0.0000 0.0000 1.4111</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_30</name><pose>10.996 66.074 9.485 0.0000 0.0000 2.1232</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_31</name><pose>-13.078 26.721 9.959 0.0000 0.0000 3.6946</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_32</name><pose>64.680 43.553 0.232 0.0000 0.0000 1.4451</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_33</name><pose>-50.746 50.392 4.463 0.0000 0.0000 1.3830</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_34</name><pose>37.970 38.485 8.808 0.0000 0.0000 0.4458</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_35</name><pose>-56.741 36.134 2.257 0.0000 0.0000 3.9633</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_36</name><pose>61.240 63.925 0.927 0.0000 0.0000 1.4378</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_37</name><pose>-63.507 55.802 0.427 0.0000 0.0000 5.6860</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_38</name><pose>-30.313 51.176 9.554 0.0000 0.0000 5.3985</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_39</name><pose>-6.016 69.321 9.310 0.0000 0.0000 0.4450</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_40</name><pose>0.076 24.362 10.009 0.0000 0.0000 1.4947</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_41</name><pose>53.642 64.490 3.279 0.0000 0.0000 4.2012</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_42</name><pose>14.166 22.865 9.936 0.0000 0.0000 1.3454</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_43</name><pose>34.126 45.284 9.577 0.0000 0.0000 0.8309</pose></include>
+<include><uri>model://pine_tree</uri><name>pino_loma_44</name><pose>-64.926 32.801 0.204 0.0000 0.0000 5.8750</pose></include>
+  </world>
+</sdf>

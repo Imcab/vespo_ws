@@ -1,0 +1,80 @@
+% =============================================================================
+\section{Máquinas de estados}
+% =============================================================================
+
+\begin{frame}{Todas las misiones tienen la misma forma}
+  \centering
+  \begin{tikzpicture}[node distance=0.45cm,
+      st/.style={draw=azul,fill=azulclaro,rounded corners,font=\scriptsize,minimum height=0.6cm,minimum width=1.5cm}]
+    \node[st] (w) {WARMUP};
+    \node[st,right=of w] (t) {TAKEOFF};
+    \node[st,right=of t,fill=yellow!20] (m) {\textbf{LA MISIÓN}};
+    \node[st,right=of m] (l) {LANDING};
+    \node[st,right=of l] (d) {DONE};
+    \draw[-{Stealth}] (w) -- node[above,font=\tiny] {offboard} (t);
+    \draw[-{Stealth}] (t) -- node[above,font=\tiny] {altura} (m);
+    \draw[-{Stealth}] (m) -- node[above,font=\tiny] {land()} (l);
+    \draw[-{Stealth}] (l) -- node[above,font=\tiny] {desarmó} (d);
+    \draw[-{Stealth},rojo,dashed] (m.south) to[bend right=25] node[below,font=\tiny] {ya no está en offboard: abortar} (d.south);
+  \end{tikzpicture}
+  \vspace{0.7em}
+  \begin{itemize}\small
+    \item \textbf{WARMUP}: \textasciitilde1 s de setpoints, luego OFFBOARD + armar (reintentando cada segundo).
+    \item \textbf{TAKEOFF}: subir sobre el despegue hasta la altura de la misión.
+    \item \textbf{LA MISIÓN}: uno o varios estados propios (vértices, hélice, barrido\ldots).
+    \item \textbf{LANDING}: PX4 aterriza y desarma solo; entonces se imprime el resultado.
+    \item \textbf{DONE}: \cmd{rclcpp::shutdown()}, así \cmd{ros2 run} regresa a la terminal.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{En código: enum class + switch}
+  \begin{lstlisting}[style=cpp,caption={El esqueleto (simplificado de estrella\_show)}]
+enum class State { WARMUP, TAKEOFF, STAR, CENTER, LANDING, DONE };
+
+void loop() {                       // timer de 50 ms
+  switch (state_) {
+    case State::WARMUP:
+      px4_.offboard(hover(center));
+      if (++counter_ % 20 == 0) px4_.request_offboard_and_arm();   // cada 1 s
+      if (px4_.in_offboard()) state_ = State::TAKEOFF;
+      return;
+    case State::TAKEOFF: ...  break;
+    case State::STAR:    ...  break;    // la misión
+    case State::LANDING:
+      if (!px4_.armed()) { report(); state_ = State::DONE; }
+      return;
+    case State::DONE: rclcpp::shutdown(); return;
+  }
+  if (state_ != State::LANDING && !px4_.in_offboard()) state_ = State::DONE;  // abortar
+}
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}{Reglas que siguen todos los nodos}
+  \begin{enumerate}\small
+    \item \textbf{Cada \cmd{case} termina en \cmd{break} o \cmd{return}}. Sin él, el código sigue en el case de abajo.
+    \item \textbf{Una transición = un log}: \cmd{RCLCPP\_INFO} al cambiar de estado, para seguir la misión en la terminal.
+    \item \textbf{Logs repetidos con throttle}: \cmd{RCLCPP\_INFO\_THROTTLE(..., 2000, ...)} como mucho cada 2 s.
+    \item \textbf{Si alguien toma el control, el nodo suelta}: fuera de OFFBOARD deja de mandar setpoints
+      (el piloto o el guardián manda).
+    \item \textbf{El nodo se califica solo}: mide durante el vuelo y al aterrizar imprime OK / FALLÓ por criterio.
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{Antes de programar: dibujar la máquina}
+  \begin{columns}[c]
+    \column{0.5\textwidth}\small
+    La rúbrica pide \textbf{explicar la máquina de estados en voz alta}. Antes de escribir código:
+    \begin{enumerate}
+      \item Escribe los estados.
+      \item Para cada uno: qué setpoint o comando manda.
+      \item Para cada flecha: qué condición la dispara.
+      \item ¿Qué pasa si algo falla en cada estado?
+    \end{enumerate}
+    \column{0.47\textwidth}
+    \begin{idea}
+      \small Una buena prueba: si alguien de otro equipo puede leer tu diagrama y adivinar qué
+      va a hacer el dron, está bien.
+    \end{idea}
+  \end{columns}
+\end{frame}

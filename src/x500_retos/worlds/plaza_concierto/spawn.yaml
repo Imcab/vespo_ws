@@ -1,0 +1,7 @@
+# Donde `vespo simulate --world plaza_concierto` pone el dron (a menos que se pase --pose).
+# yaw_deg 90 = mirando al norte, así el heading de PX4 arranca en 0.
+# Sobre la H, dentro de la geocerca.
+x: 0.0
+y: 0.0
+z: 0.3
+yaw_deg: 90
