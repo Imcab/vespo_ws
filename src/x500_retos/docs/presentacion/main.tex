@@ -23,6 +23,8 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric,shapes.misc,calc,fit,backgrounds,decorations.pathreplacing}
 \usepackage{multicol}
+\usepackage{pifont}
+\usepackage{array}
 
 \graphicspath{{img/}{../img/}{../../models/x500_aruco/}}
 
@@ -98,6 +100,50 @@
 \newcommand{\ok}{{\color{verde}\checkmark}}
 \newcommand{\mal}{{\color{rojo}$\times$}}
 
+% Láminas que se arman paso a paso: en TikZ, "visible on=<3->" muestra un
+% nodo desde el paso 3 y "alt=<2>{fill=...}{fill=...}" lo resalta en el paso 2.
+\tikzset{
+  invisible/.style={opacity=0,text opacity=0},
+  visible on/.style={alt={#1{}{invisible}}},
+  alt/.code args={<#1>#2#3}{\alt<#1>{\pgfkeysalso{#2}}{\pgfkeysalso{#3}}},
+}
+\newcommand{\credito}[1]{{\tiny\color{gris}#1}}
+
+% El x500 recortado (renders de px4_examples/docs/presentacion/tools).
+% \dronarriba{ancho}: visto desde arriba con la nariz hacia arriba; para darle
+% un yaw (0 = norte, positivo hacia el este) en TikZ: \node[rotate=-yaw].
+\newcommand{\dronarriba}[1]{\includegraphics[width=#1]{x500_icono}}
+\newcommand{\dronlado}[1]{\includegraphics[width=#1]{x500_lado_icono}}
+
+% Dificultad: \nivel{2} = dos estrellas llenas de tres.
+\newcommand{\nivel}[1]{{\color{naranja}\foreach \i in {1,2,3}{\ifnum\i>#1{\color{gris!40}\ding{72}}\else\ding{72}\fi}}}
+
+% La ficha de una misión: \ficha{render del dron}{modelo}{mundo}{nodo}{viene de}{lo nuevo}{éxito}
+\newcommand{\ficha}[7]{%
+  \begin{tcolorbox}[enhanced,colback=white,colframe=azul!50,arc=2mm,boxrule=0.5pt,drop shadow,
+      left=1.5mm,right=1.5mm,top=1mm,bottom=1mm]
+    \centering\includegraphics[width=0.5\linewidth]{#1}\\[-0.1em]{\tiny\cmd{#2}}\\[0.3em]
+    \raggedright\scriptsize
+    \begin{tabular}{@{}p{1.25cm}>{\raggedright\arraybackslash}p{3.95cm}@{}}
+      \textbf{Mundo} & \cmd{#3} \\[0.15em]
+      \textbf{Nodo} & \cmd{#4} \\[0.15em]
+      \textbf{Viene de} & #5 \\[0.15em]
+      \textbf{Lo nuevo} & #6 \\[0.15em]
+      \textbf{Éxito} & #7 \\
+    \end{tabular}
+  \end{tcolorbox}}
+
+% El estado actual de una máquina, para las láminas paso a paso:
+% \estados{<paso en que se resalta 1>/NOMBRE1, <...>/NOMBRE2, ...}
+\newcommand{\estados}[1]{%
+  \begin{tikzpicture}[every node/.style={font=\tiny\bfseries,rounded corners,draw=azul,inner sep=2.5pt,minimum height=0.45cm}]
+    \foreach \p/\n [count=\k] in {#1} {
+      \ifnum\k=1 \node[alt=<\p>{fill=yellow!60}{fill=azulclaro}] (e\k) at (0,0) {\n};
+      \else \pgfmathtruncatemacro{\km}{\k-1}%
+        \node[alt=<\p>{fill=yellow!60}{fill=azulclaro},right=0.07cm of e\km] (e\k) {\n};\fi
+    }
+  \end{tikzpicture}}
+
 % Al empezar cada sección: el contenido con la sección actual resaltada.
 \AtBeginSection[]{%
   \begin{frame}{Contenido}
@@ -115,10 +161,15 @@
 
 \begin{document}
 
-\begin{frame}
-  \titlepage
-  \vspace{-1.5em}
-  \begin{center}\includegraphics[height=1.2cm]{vespo_logo}\end{center}
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.center) {\includegraphics[width=\paperwidth]{plaza_show_estrella}};
+    \fill[white,opacity=0.82] ([yshift=-1.5cm]current page.north west) rectangle ([yshift=-4.5cm]current page.north east);
+    \node[font=\LARGE\bfseries] at ([yshift=-2.4cm]current page.north) {Misiones X500 en simulación};
+    \node[font=\normalsize] at ([yshift=-3.2cm]current page.north) {De los ejemplos a los retos: mundos, PX4, lidar, cámara y ArUco};
+    \node[font=\scriptsize] at ([yshift=-3.9cm]current page.north) {Imad Jared Cabrera Trejo · Vespo UAV · 11 de noviembre de 2026};
+    \node[anchor=south east] at ([xshift=-0.3cm,yshift=0.3cm]current page.south east) {\includegraphics[height=1.1cm]{vespo_logo}};
+  \end{tikzpicture}
 \end{frame}
 
 \begin{frame}{Agenda}
@@ -132,10 +183,10 @@
 \input{secciones/03_marcos}
 \input{secciones/04_px4_link}
 \input{secciones/05_estados}
-\input{secciones/06_mundos}
 \input{secciones/07_nivel1}
 \input{secciones/08_nivel2}
 \input{secciones/09_nivel3}
 \input{secciones/10_calificar}
+\input{secciones/06_mundos}   % apéndice: cómo están hechos los mundos
 
 \end{document}

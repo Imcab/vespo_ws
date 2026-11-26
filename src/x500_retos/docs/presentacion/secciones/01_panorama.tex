@@ -27,25 +27,27 @@
 \end{frame}
 
 \begin{frame}{Las siete misiones}
-  \centering\small
-  \begin{tabular}{clllp{4.6cm}}
-    \toprule
-    \# & Misión & Mundo & Nodo & Qué se aprende \\
-    \midrule
-    1 & Estrella del show & \cmd{plaza\_show} & \cmd{estrella\_show} & Generar waypoints con una fórmula \\
-    2 & Inspección de un pilar & \cmd{puente\_rio} & \cmd{inspeccion\_pilar} & Hélice con feedforward y yaw al centro \\
-    3 & Entrega a domicilio & \cmd{barrio\_entrega} & \cmd{entrega\_domicilio} & Misión por etapas con comandos de PX4 \\
-    \midrule
-    4 & Geocerca del concierto & \cmd{plaza\_concierto} & \cmd{guardian\_geocerca} & Un nodo que vigila y predice el frenado \\
-    5 & Cruzar una cueva & \cmd{cueva} & \cmd{cruzar\_cueva} & Control reactivo con lidar 2D \\
-    \midrule
-    6 & Caza del objetivo & \cmd{zona\_bodegas} & \cmd{caza\_objetivo} & Cámara, ArUco y seguir algo que se mueve \\
-    7 & Estación de carga & \cmd{base\_carga} & \cmd{estacion\_carga} & Batería y aterrizaje de precisión \\
-    \bottomrule
-  \end{tabular}
-  \vspace{0.6em}
-
-  \footnotesize Nivel 3 además tiene \cmd{detector\_aruco}: los ``ojos'' que comparten las misiones 6 y 7.
+  \centering
+  \begin{tikzpicture}[every node/.style={font=\tiny,align=center},
+      card/.style={inner sep=1pt,draw=azul!40,fill=white,rounded corners=1pt}]
+    \foreach \y/\l/\t in {2.55/1/moverse bien,0/2/decidir solo,-2.55/3/ver con cámara} {
+      \node[font=\scriptsize\bfseries,text=azul,anchor=east,align=right] at (-0.25,\y) {Nivel \l\\[-0.1em]\nivel{\l}\\[-0.1em]{\tiny\color{gris}\t}};}
+    \foreach \x/\y/\img/\n/\name/\nd in {
+        0/2.55/plaza_show_estrella/1/Estrella del show/estrella\_show,
+        3.55/2.55/puente_rio_pilar/2/Inspección del pilar/inspeccion\_pilar,
+        7.1/2.55/barrio_entrega_patio/3/Entrega a domicilio/entrega\_domicilio,
+        0/0/plaza_concierto/4/Geocerca del concierto/guardian\_geocerca,
+        3.55/0/cueva_columna/5/Cruzar una cueva/cruzar\_cueva,
+        0/-2.55/zona_bodegas_camioneta/6/Caza del objetivo/caza\_objetivo,
+        3.55/-2.55/base_carga_estacion/7/Estación de carga/estacion\_carga} {
+      \node[card,anchor=west] (c\n) at (\x,\y+0.2) {\includegraphics[width=3.3cm,height=1.55cm]{\img}};
+      \node[fill=azul,text=white,font=\tiny\bfseries,circle,inner sep=1.2pt] at ([xshift=5pt,yshift=-5pt]c\n.north west) {\n};
+      \node[anchor=north] at (c\n.south) {\textbf{\name} \ \cmd{\nd}};
+    }
+    \node[draw=azul!40,fill=azulclaro,rounded corners,text width=3.2cm,font=\scriptsize] at (8.75,-0.1)
+      {Del \textbf{1} al \textbf{7}, cada una usa lo de las anteriores. Nivel 3 además tiene
+       \cmd{detector\_aruco}, los ``ojos'' que comparten la 6 y la 7.};
+  \end{tikzpicture}
 \end{frame}
 
 \begin{frame}{Los mundos (1/2)}

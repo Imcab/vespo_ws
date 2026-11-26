@@ -182,20 +182,7 @@ const double n = l.x + off[0], e = l.y + off[1];        // el marcador en NED
 \end{frame}
 
 % ----------------------------------------------------------------------------- 6
-\begin{frame}{Misión 6: la caza del objetivo}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{zona_bodegas_camioneta}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: una camioneta sospechosa da vueltas en una zona de bodegas. Hay que
-    \textbf{encontrarla}, \textbf{identificarla} por el ArUco 7 de su techo (no los señuelos),
-    \textbf{dar su ubicación GPS} y \textbf{seguirla} desde arriba.
-    \begin{itemize}
-      \item Va a 3 m/s, una vuelta cada 55 s.
-      \item \textbf{Lo nuevo}: perseguir algo que se \textbf{mueve}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m6}
 
 \begin{frame}{Buscar: el barrido ``podadora''}
   \begin{columns}[c]
@@ -305,19 +292,7 @@ Veo el ArUco 25: es un señuelo, lo ignoro\\
 \end{frame}
 
 % ----------------------------------------------------------------------------- 7
-\begin{frame}{Misión 7: la estación de carga}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{base_carga}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: un dron de vigilancia patrulla la cerca de una base. Con batería baja, deja la
-    patrulla, va a su estación, \textbf{aterriza con precisión} sobre el ArUco 42, ``carga'' y
-    \textbf{regresa a patrullar justo donde se quedó}.
-    \begin{itemize}
-      \item \textbf{Viene de}: \cmd{battery\_monitor} + \cmd{square\_mission}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m7}
 
 \begin{frame}{La batería en PX4 SITL}
   \begin{columns}[c]

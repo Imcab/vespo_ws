@@ -19,7 +19,8 @@
     \column{0.47\textwidth}
     \begin{tikzpicture}[every node/.style={font=\scriptsize}]
       \node[draw=azul,fill=azulclaro,rounded corners,minimum width=2.4cm,minimum height=1.6cm] (l) {Px4Link};
-      \node[draw,rounded corners,left=1.2cm of l,minimum width=1.4cm] (p) {PX4};
+      \node[left=1.2cm of l,inner sep=0] (p) {\dronarriba{1.4cm}};
+      \node[below=0pt of p,font=\tiny] {PX4};
       \node[draw=azul,rounded corners,above=0.7cm of l,minimum width=2.4cm] (n) {tu misión};
       \draw[-{Stealth}] ([yshift=0.4cm]p.east) -- node[above,font=\tiny] {/fmu/out} ([yshift=0.4cm]l.west);
       \draw[{Stealth}-] ([yshift=-0.4cm]p.east) -- node[below,font=\tiny] {/fmu/in} ([yshift=-0.4cm]l.west);

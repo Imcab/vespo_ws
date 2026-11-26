@@ -3,21 +3,7 @@
 % =============================================================================
 
 % ----------------------------------------------------------------------------- 1
-\begin{frame}{Misión 1: la estrella del show}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{plaza_show}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: una empresa de espectáculos quiere una estrella de 5 picos a 6 m de altura
-    para el show de año nuevo.
-    \begin{itemize}
-      \item Mundo \cmd{plaza\_show}: la estrella dorada pintada en el piso.
-      \item En cada pico, una baliza con un \textbf{aro a 6 m}: el dron tiene que pasar por adentro.
-      \item \textbf{Viene de}: \cmd{square\_mission} (waypoints en offboard).
-      \item \textbf{Lo nuevo}: los waypoints se \textbf{generan con una fórmula}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m1}
 
 \begin{frame}{La geometría de la estrella}
   \begin{columns}[c]
@@ -131,21 +117,7 @@ Misión cumplida
 \end{frame}
 
 % ----------------------------------------------------------------------------- 2
-\begin{frame}{Misión 2: inspección de un pilar}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{puente_rio_pilar}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: una constructora necesita fotos de un pilar de puente desde todos los
-    ángulos y alturas.
-    \begin{itemize}
-      \item Subir en \textbf{hélice} alrededor del pilar: 3 vueltas de 1 m a 4 m.
-      \item La nariz (la cámara) \textbf{siempre apuntando al pilar}.
-      \item \textbf{Viene de}: \cmd{orbit\_mission} + \cmd{figure\_eight}.
-      \item Las bandas de colores del pilar están justo a 1, 2, 3 y 4 m.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m2}
 
 \begin{frame}{La hélice: un círculo que sube}
   \begin{columns}[c]
@@ -261,20 +233,7 @@ Misión cumplida
 \end{frame}
 
 % ----------------------------------------------------------------------------- 3
-\begin{frame}{Misión 3: entrega a domicilio}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{barrio_entrega}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: llevar un medicamento de la farmacia a una casa a \textasciitilde40 m,
-    dejarlo y volver solo.
-    \begin{itemize}
-      \item \textbf{Sin offboard}: PX4 vuela cada tramo con sus modos; el nodo solo decide qué sigue.
-      \item Si el nodo se muere, el dron se queda en Hold (no hay failsafe de offboard).
-      \item \textbf{Viene de}: \cmd{goto\_mission} + \cmd{return\_home} + \cmd{set\_home}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m3}
 
 \begin{frame}{Las fases (el log las numera [1/9] \ldots{} [9/9])}
   \centering
