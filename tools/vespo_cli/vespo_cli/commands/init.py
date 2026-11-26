@@ -10,13 +10,15 @@ import typer
 import yaml
 
 from .. import bashrc, completion, config, fx, procs, settings, system, ui
-from . import load_config
-from .build import colcon_command, run_colcon
+from . import load_config, qgc
+from .build import colcon_command, rosdep_install, run_colcon
 from .doctor import ROSDEP_LIST
-from .px4 import in_sync, sync_machine
+from .px4 import build_sitl, in_sync, install_machine, needs_install, sitl_built, sync_machine
 
 # Asked after the build, in this order, so workspace models and worlds are offered
 SIM_DEFAULTS = ("sim_model", "sim_world", "sim_pose", "sim_follow", "sim_headless")
+# Have a default that suits everyone: changed with `vespo config`, never asked here
+NOT_ASKED = ("auto_update",)
 
 
 def _save(cfg, setting, value):
@@ -33,6 +35,19 @@ def _missing_repos(cfg):
     return [name for name in repos if not (cfg.ws / "src" / name / ".git").exists()]
 
 
+def _install_qgc(cfg):
+    """QGroundControl and its system packages. A failure here never stops the setup."""
+    try:
+        qgc.install()
+    except typer.Exit:
+        ui.warn("QGroundControl was not installed. Retry with: vespo qgc install")
+        return config.load(cfg.ws)
+    missing = qgc.missing_packages()
+    if missing and procs.run(["sudo", "apt-get", "install", "-y", *missing]) != 0:
+        ui.warn(f"Could not install {', '.join(missing)}, vespo doctor will keep reporting it")
+    return config.load(cfg.ws)
+
+
 def init(
     role: Annotated[Optional[str], typer.Option("--role", help="sim, companion or ground.", autocompletion=completion.roles)] = None,
     domain_id: Annotated[Optional[int], typer.Option("--domain-id", help="ROS_DOMAIN_ID.")] = None,
@@ -41,7 +56,10 @@ def init(
     serial: Annotated[Optional[str], typer.Option("--serial", help="Serial device to the flight controller.", autocompletion=completion.serial_ports)] = None,
     baud: Annotated[Optional[int], typer.Option("--baud", help="Serial baud rate.")] = None,
     clone: Annotated[Optional[bool], typer.Option("--clone/--no-clone", help="Clone the pinned repos.")] = None,
+    px4_install: Annotated[Optional[bool], typer.Option("--px4-install/--no-px4-install", help="Install PX4 and Gazebo if missing.")] = None,
     px4_sync: Annotated[Optional[bool], typer.Option("--px4-sync/--no-px4-sync", help="Put PX4 at the team version.")] = None,
+    px4_build: Annotated[Optional[bool], typer.Option("--px4-build/--no-px4-build", help="Build PX4 SITL.")] = None,
+    qgc_install: Annotated[Optional[bool], typer.Option("--qgc-install/--no-qgc-install", help="Install QGroundControl if missing.")] = None,
     deps: Annotated[Optional[bool], typer.Option("--deps/--no-deps", help="rosdep install (uses sudo).")] = None,
     build: Annotated[Optional[bool], typer.Option("--build/--no-build", help="Build the workspace.")] = None,
     shell: Annotated[Optional[bool], typer.Option("--bashrc/--no-bashrc", help="Add the workspace to ~/.bashrc.")] = None,
@@ -58,7 +76,7 @@ def init(
     # simulation defaults wait until after the build (step 5)
     ui.header("Machine settings")
     for setting in settings.SETTINGS.values():
-        if setting.name in SIM_DEFAULTS:
+        if setting.name in SIM_DEFAULTS or setting.name in NOT_ASKED:
             continue
         if setting.name != "role" and not setting.applies(cfg, cfg.role):
             continue
@@ -75,6 +93,16 @@ def init(
             if procs.run(["vcs", "import", "--input", str(cfg.repos_path), "src"], cwd=cfg.ws) != 0:
                 ui.abort("vcs import failed")
             ui.ok("Repositories cloned")
+
+    # 2a. PX4 and Gazebo. Every role that simulates needs them
+    px4 = cfg.get("px4.path")
+    if px4 and cfg.role_spec().get("simulation") and needs_install(px4):
+        ui.header("PX4 and Gazebo")
+        ui.info(f"PX4 {cfg.get('px4.ref', '?')} and Gazebo Harmonic are not fully installed. They take about 15 GB")
+        if settings.confirm(f"Install them now in {px4}?", px4_install, yes, True):
+            cfg = install_machine(cfg, px4)
+        else:
+            ui.warn("PX4 not installed. Install it later with: vespo px4 install")
 
     # 2b. PX4-Autopilot and px4_msgs at the team version. Without rebuilding:
     # the build of step 4 builds px4_msgs anyway
@@ -94,9 +122,7 @@ def init(
     if not ROSDEP_LIST.is_file():
         ui.warn("rosdep is not initialized, skipping. Fix: sudo rosdep init && rosdep update")
     elif settings.confirm("Install missing ROS dependencies with rosdep (asks for sudo)?", deps, yes, True):
-        cmd = f"rosdep install --from-paths src --ignore-src -y -r --rosdistro {cfg.distro}"
-        if procs.run(procs.ros_cmd(cfg.distro, cmd), cwd=cfg.ws) != 0:
-            ui.warn("rosdep could not install everything; vespo build will show what is missing")
+        rosdep_install(cfg)
 
     # 4. Build
     ui.header("Build")
@@ -104,6 +130,19 @@ def init(
         if run_colcon(cfg, colcon_command(cfg, None, cfg.role)) != 0:
             ui.abort("Build failed, see the output above. Re-run with: vespo build")
         ui.ok("Workspace built")
+
+    # 4b. PX4 SITL now rather than on the first vespo simulate, so a problem
+    # shows up during the setup
+    px4 = cfg.get("px4.path")
+    if (px4 and cfg.role_spec().get("simulation") and system.is_px4_tree(px4) and not sitl_built(px4)
+            and settings.confirm("Build PX4 SITL now?", px4_build, yes, True)):
+        build_sitl(px4)
+
+    # 4c. QGroundControl
+    if cfg.role_spec().get("qgc") and not qgc.find(cfg):
+        ui.header("QGroundControl")
+        if settings.confirm("Download QGroundControl now?", qgc_install, yes, True):
+            cfg = _install_qgc(cfg)
 
     # 5. Simulation defaults. Their menus list the models and worlds that
     # workspace packages install, which only exist once the build has run

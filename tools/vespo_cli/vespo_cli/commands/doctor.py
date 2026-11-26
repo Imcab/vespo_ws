@@ -110,7 +110,7 @@ def check_px4(r, cfg):
     r.section("PX4")
     path = cfg.get("px4.path")
     if not path or not system.is_px4_tree(path):
-        r.fail("PX4-Autopilot path not set or invalid", "vespo config edit px4_path")
+        r.fail("PX4-Autopilot path not set or invalid", "vespo px4 install")
         return
     px4 = Path(path)
     head = system.git_head(px4)
@@ -130,7 +130,7 @@ def check_px4(r, cfg):
             "PX4 SITL not built yet", "vespo simulate (builds it on the first run)", warn_only=True)
     gz = system.gz_version()
     r.check(gz and gz.startswith("8."), f"Gazebo Harmonic {gz}",
-            f"Gazebo Harmonic not found (gz sim {gz or 'missing'})", f"sudo apt install ros-{cfg.distro}-ros-gz")
+            f"Gazebo Harmonic not found (gz sim {gz or 'missing'})", "vespo px4 install")
 
 
 def check_link(r, cfg):

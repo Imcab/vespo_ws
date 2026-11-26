@@ -1,7 +1,9 @@
 """
 `vespo px4`: which PX4 this workspace is pinned to, and moving that pin.
 
-Two different jobs:
+Three different jobs:
+  install gets PX4 on THIS machine: clones it at the pinned version, installs
+          its toolchain and Gazebo Harmonic, and builds SITL.
   sync    puts THIS machine at the versions pinned in vespo.toml / vespo.repos.
           It never changes the pin. This is what a teammate runs after cloning
           or pulling.
@@ -9,18 +11,21 @@ Two different jobs:
           out, finds the px4_msgs commit with exactly the same messages
           (msgs.find_matching_commit) and writes both to vespo.toml /
           vespo.repos, to be committed.
-Both rebuild px4_msgs and everything that depends on it.
+sync and update rebuild px4_msgs and everything that depends on it.
 """
 
 import re
+import shutil
+from pathlib import Path
 from typing import Annotated, Optional
 
 import typer
 import yaml
 
-from .. import completion, msgs, procs, settings, system, ui
+from .. import completion, config, msgs, procs, settings, system, ui
 from . import load_config, require_px4
 from .build import run_colcon
+from .simulate import compile_sitl
 
 app = typer.Typer(
     help="Show or change the PX4 version of the workspace.",
@@ -29,6 +34,13 @@ app = typer.Typer(
 
 STABLE_TAG = re.compile(r"^v(\d+)\.(\d+)\.(\d+)$")
 PINNED = "pinned"
+PX4_URL = "https://github.com/PX4/PX4-Autopilot.git"
+DISK_NEEDED_GB = 15    # checkout, submodules and the SITL build
+
+# ubuntu.sh appends to ~/.bashrc and downloads a compiler on every run, so it
+# only runs when one of these is missing
+SETUP_PACKAGES = ("gz-harmonic", "ninja-build", "protobuf-compiler")
+SETUP_PYTHON = ("em", "genmsg", "jinja2", "kconfiglib")
 
 
 def _msgs_repo(cfg):
@@ -93,8 +105,8 @@ def _git(repo, *args, timeout=600):
     return code == 0
 
 
-def _checkout(px4, commit, repo, msgs_commit):
-    """Checks PX4 (with its submodules) and px4_msgs out at the given commits."""
+def _checkout_px4(px4, commit):
+    """Checks PX4 out at a commit, with its submodules."""
     code, dirty = procs.capture(["git", "-C", str(px4), "status", "--porcelain", "--untracked-files=no"])
     if dirty:
         ui.abort("PX4-Autopilot has uncommitted changes. Commit or stash them first")
@@ -106,6 +118,11 @@ def _checkout(px4, commit, repo, msgs_commit):
     if not (_git(px4, "submodule", "sync", "--recursive")
             and _git(px4, "submodule", "update", "--init", "--recursive", "--jobs", "8", timeout=1800)):
         ui.abort("Updating the PX4 submodules failed. Run in PX4-Autopilot: git submodule update --init --recursive")
+
+
+def _checkout(px4, commit, repo, msgs_commit):
+    """Checks PX4 (with its submodules) and px4_msgs out at the given commits."""
+    _checkout_px4(px4, commit)
     if not _git(repo, "checkout", "--quiet", "--detach", msgs_commit):
         ui.abort("Could not check out px4_msgs")
 
@@ -174,6 +191,113 @@ def sync_machine(cfg, dry_run=False, rebuild=True):
     if px4_head != commit:
         ui.warn(f"Flash PX4 {ref} on the flight controllers too: vespo flash")
     return True
+
+
+def setup_missing():
+    """What PX4's setup script would install that is not here yet."""
+    missing = [pkg for pkg in SETUP_PACKAGES if procs.capture(["dpkg", "-s", pkg])[0] != 0]
+    for module in SETUP_PYTHON:
+        if procs.capture(["python3", "-c", f"import {module}"])[0] != 0:
+            missing.append(f"python: {module}")
+    return missing
+
+
+def submodules_ready(px4):
+    code, out = procs.capture(["git", "-C", str(px4), "submodule", "status"], timeout=60)
+    return code == 0 and not any(line.startswith("-") for line in out.splitlines())
+
+
+def needs_install(path):
+    """Whether `vespo px4 install` has anything left to do at this path."""
+    return not system.is_px4_tree(path) or not submodules_ready(path) or bool(setup_missing())
+
+
+def sitl_built(px4):
+    return (Path(px4) / "build" / "px4_sitl_default" / "bin" / "px4").is_file()
+
+
+def _clone(cfg, path):
+    """Clones PX4 at the pinned version. An interrupted clone is resumed, not repeated."""
+    if not system.is_px4_tree(path):
+        if path.exists() and any(path.iterdir()):
+            ui.abort(f"{path} is not empty and is not PX4-Autopilot. Choose another place with --path")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        free = shutil.disk_usage(path.parent).free / 1e9
+        if free < DISK_NEEDED_GB:
+            ui.warn(f"Only {free:.0f} GB free in {path.parent}, PX4 needs about {DISK_NEEDED_GB} GB")
+        ui.info("Downloading PX4-Autopilot, about 2 GB (this can take a while)")
+        if procs.run(["git", "clone", "--branch", cfg.get("px4.ref"), PX4_URL, str(path)]) != 0:
+            ui.abort("Could not clone PX4-Autopilot. Check the internet connection and run this again")
+
+    commit = system.git_resolve(path, cfg.get("px4.commit"))
+    if not commit:
+        ui.abort(f"PX4-Autopilot has no commit {cfg.get('px4.commit')[:10]} ({cfg.get('px4.ref')})")
+    if system.git_head(path) != commit:
+        _checkout_px4(path, commit)
+    elif procs.run(["git", "-C", str(path), "submodule", "update", "--init", "--recursive", "--jobs", "8"]) != 0:
+        ui.abort("Could not download the PX4 submodules. Check the internet connection and run this again")
+
+
+def _run_setup(px4, nuttx):
+    flags = [] if nuttx else ["--no-nuttx"]
+    ui.info("Installing PX4's toolchain and Gazebo Harmonic (asks for sudo, takes several minutes)")
+    if procs.run(["bash", "Tools/setup/ubuntu.sh", *flags], cwd=px4) != 0:
+        ui.abort("PX4's setup script failed, see the output above. Run this again once it is fixed")
+    if setup_missing():
+        ui.abort(f"Still missing after PX4's setup script: {', '.join(setup_missing())}")
+
+
+def _configured_without_gazebo(px4):
+    """A build configured before Gazebo was there never gets the gz_* make targets."""
+    try:
+        cache = (Path(px4) / "build" / "px4_sitl_default" / "CMakeCache.txt").read_text(errors="ignore")
+    except OSError:
+        return False
+    return "gz-transport_DIR:PATH=gz-transport_DIR-NOTFOUND" in cache
+
+
+def build_sitl(px4):
+    """Builds PX4 SITL and its Gazebo plugins without starting them."""
+    if _configured_without_gazebo(px4):
+        ui.info("The last PX4 build was configured without Gazebo, starting it over")
+        shutil.rmtree(Path(px4) / "build" / "px4_sitl_default")
+    ui.info("Building PX4 SITL (this can take several minutes)")
+    if compile_sitl(Path(px4)) != 0:
+        ui.abort("Building PX4 SITL failed, see the output above. Retry with: vespo px4 install")
+    ui.ok("PX4 SITL built")
+
+
+def install_machine(cfg, path, nuttx=True, force=False):
+    """Gets PX4 and Gazebo on this machine. Returns the config with px4_path saved."""
+    path = Path(path).expanduser().resolve()
+    ui.header(f"Installing PX4 {cfg.get('px4.ref', '?')} in {path}")
+    _clone(cfg, path)
+    config.save_local_key(cfg, "px4.path", str(path))
+    cfg = config.load(cfg.ws)
+
+    missing = setup_missing()
+    if missing or force:
+        _run_setup(path, nuttx)
+    else:
+        ui.ok("PX4's toolchain and Gazebo Harmonic already installed")
+    ui.ok(f"PX4-Autopilot ready at {path}")
+    return cfg
+
+
+@app.command()
+def install(
+    path: Annotated[Optional[Path], typer.Option("--path", help="Where PX4-Autopilot goes (default: next to the workspace).")] = None,
+    nuttx: Annotated[bool, typer.Option("--nuttx/--no-nuttx", help="Also install the compilers vespo flash needs.")] = True,
+    build: Annotated[bool, typer.Option("--build/--no-build", help="Build PX4 SITL at the end.")] = True,
+    force: Annotated[bool, typer.Option("--force", help="Run PX4's setup script even if nothing seems missing.")] = False,
+):
+    """Install PX4 at the team version with its toolchain and Gazebo Harmonic. Safe to run again."""
+    cfg = load_config()
+    target = path or cfg.get("px4.path") or cfg.ws.parent / "PX4-Autopilot"
+    cfg = install_machine(cfg, target, nuttx, force)
+    if build:
+        build_sitl(cfg.get("px4.path"))
+    ui.info("Log out and back in if this is the first install: the serial port group needs a new session")
 
 
 @app.command()

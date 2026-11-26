@@ -31,6 +31,13 @@ def run_colcon(cfg, cmd):
     return procs.run(procs.ros_cmd(cfg.distro, shlex.join(cmd)), cwd=cfg.ws)
 
 
+def rosdep_install(cfg):
+    """Installs the system dependencies of the packages in src/."""
+    cmd = f"rosdep install --from-paths src --ignore-src -y -r --rosdistro {cfg.distro}"
+    if procs.run(procs.ros_cmd(cfg.distro, cmd), cwd=cfg.ws) != 0:
+        ui.warn("rosdep could not install everything; vespo build will show what is missing")
+
+
 def stale_packages(cfg):
     """Packages whose last build failed because of an old non-symlink build."""
     stale = []

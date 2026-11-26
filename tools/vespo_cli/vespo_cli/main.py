@@ -5,8 +5,8 @@ from typing import Annotated
 import typer
 import typer.completion
 
-from . import __version__, fx
-from .commands import agent, build, clean, configure, doctor, flash, init, new, px4, qgc, simulate, up
+from . import __version__, fx, updater
+from .commands import agent, build, clean, configure, doctor, flash, init, new, px4, qgc, simulate, up, update
 
 # The group's --help is ours (the animated home screen), so Typer's default is
 # turned off here and turned back on for each subcommand with HELP.
@@ -41,6 +41,7 @@ def main(
     show_help: Annotated[bool, typer.Option("--help", "-h", is_eager=True, help="Show this screen.")] = False,
 ):
     """VespoUAV workspace tool."""
+    updater.tick(ctx.invoked_subcommand)
     if show_help or ctx.invoked_subcommand is None:
         show_home(ctx)
         raise typer.Exit()
@@ -61,6 +62,7 @@ app.command(context_settings=HELP)(simulate.simulate)
 app.command(context_settings=HELP)(flash.flash)
 app.command(context_settings=HELP)(up.up)
 app.command(context_settings=HELP)(up.down)
+app.command(context_settings=HELP)(update.update)
 app.add_typer(configure.app, name="config")
 app.add_typer(px4.app, name="px4")
 app.add_typer(qgc.app, name="qgc")

@@ -33,6 +33,13 @@ headless = false
 # third-party examples nobody here runs.
 skip_regex = ["example_.*"]
 
+# What vespo does when the team pushes something, see `vespo update`:
+#   cli     applies updates that only touch the CLI, tells about the rest
+#   notify  only tells
+#   off     never checks
+[update]
+auto = "cli"
+
 [agent]
 udp_port = 8888
 baud = 921600
