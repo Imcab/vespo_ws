@@ -17,9 +17,9 @@ def require_px4(cfg):
     """PX4-Autopilot path of this machine, or abort with the fix."""
     path = cfg.get("px4.path")
     if not path:
-        ui.abort("PX4-Autopilot path is not set. Run: vespo config edit px4_path")
+        ui.abort("PX4-Autopilot path is not set. Install it with: vespo px4 install")
     if not system.is_px4_tree(path):
-        ui.abort(f"{path} is not a PX4-Autopilot checkout. Run: vespo config edit px4_path")
+        ui.abort(f"{path} is not a PX4-Autopilot checkout. Install it with: vespo px4 install")
     return Path(path)
 
 

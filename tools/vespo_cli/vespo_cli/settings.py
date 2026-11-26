@@ -117,9 +117,13 @@ def ask_flight_controller(cfg, explicit, yes):
 
 def ask_px4_path(cfg, explicit, yes):
     candidates = system.px4_candidates(cfg.ws)
-    default = cfg.get("px4.path") or (str(candidates[0]) if candidates else None)
+    default = cfg.get("px4.path") or str(candidates[0] if candidates else cfg.ws.parent / "PX4-Autopilot")
     while True:
-        answer = ask("Path to PX4-Autopilot", default, explicit and str(explicit), yes, "--px4-path")
+        answer = ask("Path to PX4-Autopilot (installed there if it is not there yet)", default,
+                     explicit and str(explicit), yes, "--px4-path")
+        path = Path(answer).expanduser().resolve()
+        if not path.exists() or (path.is_dir() and not any(path.iterdir())):
+            return str(path)
         try:
             return parse_px4_path(cfg, answer)
         except ValueError as e:
@@ -161,6 +165,13 @@ def ask_qgc_path(cfg, explicit, yes):
 
 def ask_baud(cfg, explicit, yes):
     return ask("Baud rate", cfg.get("agent.baud", 921600), explicit, yes, "--baud", int, in_range(1))
+
+
+def ask_auto_update(cfg, explicit, yes):
+    options = [("cli", "Apply CLI updates by itself, tell about the rest"),
+               ("notify", "Only tell when there is something new"),
+               ("off", "Never check")]
+    return choose("Automatic updates", options, cfg.get("update.auto", "cli"), explicit, yes, "--auto-update")
 
 
 # Simulation defaults, used by `vespo simulate --default`
@@ -266,6 +277,12 @@ def parse_qgc_path(cfg, text):
     return str(path)
 
 
+def parse_auto_update(cfg, text):
+    if text not in ("cli", "notify", "off"):
+        raise ValueError(f"Unknown value '{text}'. Options: cli, notify, off")
+    return text
+
+
 def parse_text(cfg, text):
     return text
 
@@ -354,6 +371,7 @@ SETTINGS = {s.name: s for s in [
     Setting("serial", "agent.device", "Serial device", ask_serial, parse_text, _serial),
     Setting("baud", "agent.baud", "Serial baud rate", ask_baud, parse_int(1, 4_000_000), _serial),
     Setting("qgc_path", "qgc.path", "QGroundControl AppImage", ask_qgc_path, parse_qgc_path, _qgc),
+    Setting("auto_update", "update.auto", "Automatic updates", ask_auto_update, parse_auto_update),
     # After px4_path: the model and world menus are read from the PX4 checkout
     Setting("sim_model", "simulation.model", "Default sim model", ask_sim_model, parse_sim_model, _simulation),
     Setting("sim_world", "simulation.world", "Default sim world", ask_sim_world, parse_sim_world, _simulation),

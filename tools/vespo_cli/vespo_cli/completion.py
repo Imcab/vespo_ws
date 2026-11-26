@@ -122,6 +122,7 @@ def setting_values(ctx: typer.Context, incomplete: str):
     if name in fixed:
         return fixed[name](incomplete)
     choices = {
+        "auto_update": ["cli", "notify", "off"],
         "sim_headless": ["true", "false"],
         "sim_follow": ["auto", "off", "2", "4"],
         "sim_pose": ["auto"],

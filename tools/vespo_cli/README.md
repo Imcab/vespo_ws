@@ -11,9 +11,10 @@ From the workspace root:
 ./bootstrap.sh
 ```
 
-It checks Python and ROS, installs missing system tools (`colcon`, `vcs`,
-`rosdep`), installs this CLI into `.venv/` (linked as `~/.local/bin/vespo`)
-and runs `vespo init`.
+It needs Ubuntu 24.04 (the only one with ROS 2 Jazzy packages). It adds the ROS
+apt repository, installs ROS 2 and the build tools (`colcon`, `vcs`, `rosdep`),
+initializes rosdep, installs this CLI into `.venv/` (linked as
+`~/.local/bin/vespo`) and runs `vespo init`.
 
 `vespo init` also installs Tab completion for bash
 (`~/.local/share/bash-completion/completions/vespo`): commands, options and
@@ -31,7 +32,8 @@ Unattended, e.g. a Jetson over SSH:
 
 | Command | What it does |
 |---|---|
-| `vespo init` | Asks the role of the machine and what that role needs, writes `vespo.local.toml`, clones the pinned repos, installs dependencies with rosdep, builds and adds the workspace to `~/.bashrc`. Re-run it any time: previous answers are the defaults. |
+| `vespo init` | Asks the role of the machine and what that role needs, writes `vespo.local.toml`, clones the pinned repos, installs what the role is missing (PX4, Gazebo Harmonic, QGroundControl), installs dependencies with rosdep, builds the workspace and PX4 SITL, and adds the workspace to `~/.bashrc`. Re-run it any time: previous answers are the defaults, and an interrupted install continues. |
+| `vespo update [--check] [--no-build]` | Gets the team's latest version: pulls the workspace and redoes only what that made necessary (CLI dependencies, pinned repos, PX4 version, rosdep, build). `--check` only shows what is new. See [Updates](#updates). |
 | `vespo doctor [--live]` | Checks ROS, the workspace, the pinned repos, PX4, px4_msgs, Gazebo and the link to the flight controller, with a fix for each problem. `--live` also looks for `/fmu` topics. Exits 1 if anything failed. |
 | `vespo build [PKG...] [--role R]` | `colcon build --symlink-install`, skipping the packages the role does not need. |
 | `vespo new PKG [--cpp \| --python] [-t offboard\|listener] [-n NODE]` | Creates `src/PKG`, a ROS 2 package for PX4 with a first node and `launch/PKG.launch.py` (ready for `vespo up --launch PKG PKG.launch.py`), then builds it (`--no-build` to skip). `offboard` takes off in OFFBOARD and hovers at the `altitude` parameter (it arms the vehicle); `listener` only reads status, position and battery. On an existing package it adds a node instead (C++: the `NODES` list in CMakeLists.txt; Python: `console_scripts` in setup.py). PX4 topic names, including their `_vN` version suffix, are taken from the px4_msgs of the workspace. Templates are in `vespo_cli/templates/`. |
@@ -44,12 +46,34 @@ Unattended, e.g. a Jetson over SSH:
 | `vespo config set NAME VALUE` | Changes one setting, validated, without re-running init. |
 | `vespo config edit [NAME]` | Asks one setting again from a menu. Changing the role asks for whatever the new role needs; changing `domain_id` updates `~/.bashrc`. |
 | `vespo px4` | Shows the pinned PX4 version and whether PX4-Autopilot and px4_msgs match it. |
+| `vespo px4 install [--path P] [--no-nuttx] [--no-build] [--force]` | Clones PX4-Autopilot at the pinned version (next to the workspace by default), runs PX4's `Tools/setup/ubuntu.sh`, which also installs Gazebo Harmonic, saves `px4_path` and builds SITL. `vespo init` runs it on `sim` machines. `--no-nuttx` skips the compilers `vespo flash` needs. Safe to run again: it resumes a cut download and skips what is installed. |
 | `vespo px4 sync [--dry-run]` | Puts this machine's PX4-Autopilot (with its submodules) and px4_msgs at the versions pinned in `vespo.toml` / `vespo.repos` and rebuilds px4_msgs and its dependents. Never changes the pin. This is the fix whenever doctor says PX4 is not at the pinned version, e.g. after cloning PX4 at another version or pulling a new pin. `vespo init` offers it too. |
 | `vespo px4 update [REF \| --main \| --release] [--dry-run] [--yes]` | Changes the PX4 version of the whole team: moves PX4-Autopilot to a version and px4_msgs to the newest commit with exactly the same messages (compared by git blob hash), pins both in `vespo.toml` / `vespo.repos` (commit them) and rebuilds. Asks before changing the pin. Without arguments it offers a menu whose default keeps the team version (same as `sync`). |
 | `vespo qgc [-f]` | Launches QGroundControl in the background (log in `~/.cache/vespo/qgc.log`); `-f` keeps it attached to the terminal. Warns about missing packages and ModemManager. |
 | `vespo qgc status` | Where the AppImage is, its version, the latest release on GitHub, and whether the system packages, ModemManager and the `dialout` group are right. |
 | `vespo qgc install [--path P] [--force]` | Downloads the latest QGroundControl AppImage for this machine (x86_64 or aarch64), or updates the installed one, and saves it as `qgc_path`. |
 | `vespo flash [--no-upload] [--target T]` | `make <target> upload` in PX4-Autopilot for the configured flight controller. `--no-upload` only builds. |
+
+## Updates
+
+Every command looks at the local git refs and tells you if the team pushed
+something. At most every 6 hours, a detached process fetches from GitHub; it
+never slows a command down, and it fails silently without internet. It is not
+started by `up`, `simulate`, `agent`, `flash`, `build` or `init`.
+
+The `auto_update` setting (`vespo config set auto_update VALUE`) decides what
+happens with what it finds:
+
+| Value | Behaviour |
+|---|---|
+| `cli` (default) | Applies updates that only touch `tools/vespo_cli/` or `.md` files, which need no rebuild, and tells you about the rest. |
+| `notify` | Only tells you. |
+| `off` | Never checks. |
+
+Anything else (`src/`, the pins, the CLI's dependencies) waits for you to run
+`vespo update`, because it needs a rebuild. An update is never applied over
+your work: with commits not pushed, or edits to a file that changed, vespo
+leaves everything as it is and tells you what to do.
 
 ## Roles
 
@@ -85,7 +109,8 @@ Local values override project values key by key.
 Settings (`vespo config` names): `role`, `domain_id`, `flight_controller`,
 `px4_path`, `serial`, `baud`, `qgc_path`, and for simulation `sim_model`, `sim_world`,
 `sim_pose`, `sim_follow`, `sim_headless` (what `vespo simulate --default`
-runs; team defaults in `vespo.toml` under `[simulation]`). They are defined
+runs; team defaults in `vespo.toml` under `[simulation]`), and `auto_update`
+(see [Updates](#updates)). They are defined
 once in `vespo_cli/settings.py` and shared by `init` and `config`.
 
 Flight controllers are listed in `vespo.toml` under `[flight_controllers]`,

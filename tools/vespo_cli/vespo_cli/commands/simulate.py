@@ -241,7 +241,7 @@ def simulate(
     # A workspace world loads PX4's Gazebo plugins, and a workspace airframe
     # is linked into the build, so both need the build done before starting
     if world_sdf or ws_airframe:
-        code = _build_sitl(px4)
+        code = compile_sitl(px4)
         if code:
             raise typer.Exit(code)
 
@@ -273,7 +273,7 @@ def _sitl_build(px4):
     return px4 / "build" / "px4_sitl_default"
 
 
-def _build_sitl(px4):
+def compile_sitl(px4):
     """Builds PX4 SITL and its Gazebo plugins, what `make px4_sitl gz_<model>` builds."""
     build = _sitl_build(px4)
     if not (build / "CMakeCache.txt").is_file():
