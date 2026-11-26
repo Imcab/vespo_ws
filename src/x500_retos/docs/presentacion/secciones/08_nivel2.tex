@@ -3,21 +3,7 @@
 % =============================================================================
 
 % ----------------------------------------------------------------------------- 4
-\begin{frame}{Misión 4: la geocerca del concierto}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{plaza_concierto}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: en un concierto el dron no puede salirse de una caja de
-    20\,$\times$\,20\,$\times$\,8 m.
-    \begin{itemize}
-      \item Un nodo \textbf{guardián} que \textbf{no vuela}: solo vigila.
-      \item Si el dron va a salirse: \textbf{Hold}, y ya quieto, \textbf{Return}.
-      \item Funciona \textbf{sin importar quién vuela}: un nodo, QGC o un piloto.
-      \item \textbf{Viene de}: \cmd{flight\_mode\_monitor} + \cmd{return\_home}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m4}
 
 \begin{frame}{La caja}
   \begin{columns}[c]
@@ -149,20 +135,7 @@ Return subió a 9 m, arriba de la cerca:\\
 \end{frame}
 
 % ----------------------------------------------------------------------------- 5
-\begin{frame}{Misión 5: cruzar una cueva}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-    \includegraphics[width=\linewidth]{cueva_angostura}
-    \column{0.47\textwidth}\small
-    \textbf{Escenario}: atravesar un túnel curvo y oscuro usando \textbf{solo el lidar} para no chocar.
-    \begin{itemize}
-      \item Túnel de \textasciitilde66 m, 5 m de ancho, 4 m de alto.
-      \item Dos angosturas de 3 m.
-      \item Una columna de roca a medio camino: \textbf{solo se pasa por la izquierda}.
-      \item \textbf{Viene de}: \cmd{velocity\_control}.
-    \end{itemize}
-  \end{columns}
-\end{frame}
+\input{secciones/misiones/m5}
 
 \begin{frame}{El mapa de la cueva}
   \centering
@@ -173,8 +146,8 @@ Return subió a 9 m, arriba de la cerca:\\
     \draw[azul,thick,smooth] plot coordinates {(0,0) (0,10) (0,16) (2,23) (6,30) (8,37) (7,44) (3,50) (-1,56) (-3,63) (-2,70) (-1,76) (-1,84)};
     \node[draw,circle,fill=azulclaro,inner sep=0.5pt,font=\tiny] at (0,0) {H};
     \fill[orange] (-2.5,81.5) rectangle (0.5,86.5); \node[font=\tiny,right] at (1,84) {plataforma (N 84, E $-$1)};
-    \fill[gray!70] (5.5,34) circle (1.5); \node[font=\tiny,right] at (9,34) {columna};
-    \node[font=\tiny,right] at (4,23) {angostura};
+    \fill[gray!70] (9.1,41.9) circle (1.5); \node[font=\tiny,right] at (12,41.9) {columna (E 9.1, N 41.9)};
+    \node[font=\tiny,right] at (7,26.5) {angostura};
     \node[font=\tiny,right] at (3,55) {angostura};
     \node[font=\tiny,right] at (1,11.5) {boca sur (N 10)};
     \node[font=\tiny,right] at (1,74.5) {boca norte (N 76)};

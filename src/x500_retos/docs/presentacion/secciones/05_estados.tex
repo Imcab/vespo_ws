@@ -16,6 +16,13 @@
     \draw[-{Stealth}] (m) -- node[above,font=\tiny] {land()} (l);
     \draw[-{Stealth}] (l) -- node[above,font=\tiny] {desarmó} (d);
     \draw[-{Stealth},rojo,dashed] (m.south) to[bend right=25] node[below,font=\tiny] {ya no está en offboard: abortar} (d.south);
+    \node[above=0.15cm of w] {\dronlado{0.95cm}};
+    \node[above=0.15cm of t,yshift=0.3cm] {\dronlado{0.95cm}};
+    \draw[-{Stealth},verde,thick] ([yshift=0.2cm]t.north east) -- ++(0,0.7);
+    \node[above=0.15cm of m,yshift=0.6cm] {\dronarriba{1cm}};
+    \node[above=0.15cm of l,yshift=0.3cm] {\dronlado{0.95cm}};
+    \draw[-{Stealth},naranja,thick] ([yshift=0.9cm]l.north east) -- ++(0,-0.7);
+    \node[above=0.15cm of d] {\dronlado{0.95cm}};
   \end{tikzpicture}
   \vspace{0.7em}
   \begin{itemize}\small

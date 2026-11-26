@@ -47,7 +47,7 @@ public:
     // La impresión la hace el timer, para no llenar la terminal
     // (algunos topics llegan a 50-100 Hz).
 
-    // Sufijo _v4: VehicleStatus tiene MESSAGE_VERSION = 4.
+    // Sufijo _v1: VehicleStatus tiene MESSAGE_VERSION = 1.
     status_sub_ = create_subscription<VehicleStatus>(
       "/fmu/out/vehicle_status_v1", qos,
       [this](const VehicleStatus::SharedPtr msg) {status_ = *msg;});
